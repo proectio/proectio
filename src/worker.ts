@@ -7,7 +7,6 @@ interface Env {
   GITHUB_PRIVATE_KEY: string;
   GITHUB_CLIENT_ID: string;
   GITHUB_CLIENT_SECRET: string;
-  GITHUB_CALLBACK_URL: string;
   SESSION_SECRET: string;
   OWNER_LOGIN: string;
 }
@@ -38,6 +37,10 @@ function secureCookies(request: Request): boolean {
   return new URL(request.url).protocol === "https:";
 }
 
+function callbackUrl(request: Request): string {
+  return new URL("/auth/github/callback", new URL(request.url).origin).toString();
+}
+
 async function isAuthenticated(request: Request, env: Env): Promise<boolean> {
   return verifySession(readCookie(request, sessionCookie), env.OWNER_LOGIN, env.SESSION_SECRET);
 }
@@ -46,8 +49,9 @@ async function beginGitHubAuth(request: Request, env: Env): Promise<Response> {
   const state = randomState();
   const authorize = new URL("https://github.com/login/oauth/authorize");
   authorize.searchParams.set("client_id", env.GITHUB_CLIENT_ID);
-  authorize.searchParams.set("redirect_uri", env.GITHUB_CALLBACK_URL);
+  authorize.searchParams.set("redirect_uri", callbackUrl(request));
   authorize.searchParams.set("state", state);
+
   return new Response(null, {
     status: 302,
     headers: {
@@ -74,9 +78,10 @@ async function finishGitHubAuth(request: Request, env: Env): Promise<Response> {
       client_id: env.GITHUB_CLIENT_ID,
       client_secret: env.GITHUB_CLIENT_SECRET,
       code,
-      redirect_uri: env.GITHUB_CALLBACK_URL,
+      redirect_uri: callbackUrl(request),
     }),
   });
+
   const token = (await tokenResponse.json()) as GitHubOAuthTokenResponse;
   if (!token.access_token) {
     return json({ error: token.error_description ?? token.error ?? "GitHub OAuth failed" }, 401);
@@ -90,6 +95,7 @@ async function finishGitHubAuth(request: Request, env: Env): Promise<Response> {
       "User-Agent": "Repory",
     },
   });
+
   const user = (await userResponse.json()) as GitHubUser;
   if (!userResponse.ok || user.login.toLowerCase() !== env.OWNER_LOGIN.toLowerCase()) {
     return json({ error: "This GitHub account is not allowed to access Repory" }, 403);
@@ -109,6 +115,14 @@ export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
 
+    if (url.pathname === "/api/health") {
+      return json({
+        ok: true,
+        service: "repory",
+        githubAppConfigured: Boolean(env.GITHUB_APP_ID && env.GITHUB_CLIENT_ID),
+      });
+    }
+
     if (url.pathname === "/auth/github") return beginGitHubAuth(request, env);
     if (url.pathname === "/auth/github/callback") return finishGitHubAuth(request, env);
 
@@ -125,6 +139,7 @@ export default {
 
     if (url.pathname === "/api/inventory") {
       if (!(await isAuthenticated(request, env))) return json({ error: "Unauthorized" }, 401);
+
       try {
         return json({ installations: await loadInventory(env.GITHUB_APP_ID, env.GITHUB_PRIVATE_KEY) });
       } catch (error) {
@@ -135,6 +150,7 @@ export default {
 
     if (url.pathname === "/api/repository-details") {
       if (!(await isAuthenticated(request, env))) return json({ error: "Unauthorized" }, 401);
+
       const installationId = Number(url.searchParams.get("installationId"));
       const fullName = url.searchParams.get("repo") ?? "";
       if (!Number.isInteger(installationId) || installationId <= 0 || !/^[^/]+\/[^/]+$/.test(fullName)) {
