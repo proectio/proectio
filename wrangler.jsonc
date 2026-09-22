@@ -9,6 +9,15 @@
     "not_found_handling": "single-page-application"
   },
   "vars": {
+    "GITHUB_APP_ID": "5035680",
+    "GITHUB_CLIENT_ID": "Iv23liRYQ460OIMG6JO8",
     "OWNER_LOGIN": "sergii"
+  },
+  "secrets": {
+    "required": [
+      "GITHUB_PRIVATE_KEY",
+      "GITHUB_CLIENT_SECRET",
+      "SESSION_SECRET"
+    ]
   }
 }
