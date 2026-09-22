@@ -67,31 +67,75 @@ function base64Url(input: Uint8Array | string): string {
   return btoa(binary).replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
 }
 
-function pemToArrayBuffer(pem: string): ArrayBuffer {
+function concatBytes(...parts: Uint8Array[]): Uint8Array {
+  const total = parts.reduce((sum, part) => sum + part.length, 0);
+  const result = new Uint8Array(total);
+  let offset = 0;
+
+  for (const part of parts) {
+    result.set(part, offset);
+    offset += part.length;
+  }
+
+  return result;
+}
+
+function derLength(length: number): Uint8Array {
+  if (length < 0x80) return new Uint8Array([length]);
+
+  const octets: number[] = [];
+  let remaining = length;
+  while (remaining > 0) {
+    octets.unshift(remaining & 0xff);
+    remaining >>= 8;
+  }
+
+  return new Uint8Array([0x80 | octets.length, ...octets]);
+}
+
+function decodePem(pem: string, label: string): Uint8Array {
   const normalized = pem.replace(/\\n/g, "\n");
-  const base64 = normalized
-    .replace(/-----BEGIN PRIVATE KEY-----/g, "")
-    .replace(/-----END PRIVATE KEY-----/g, "")
+  const body = normalized
+    .replace(`-----BEGIN ${label}-----`, "")
+    .replace(`-----END ${label}-----`, "")
     .replace(/\s/g, "");
 
-  const binary = atob(base64);
+  const binary = atob(body);
   const bytes = new Uint8Array(binary.length);
   for (let index = 0; index < binary.length; index += 1) {
     bytes[index] = binary.charCodeAt(index);
   }
-  return bytes.buffer;
+  return bytes;
+}
+
+function wrapPkcs1AsPkcs8(pkcs1: Uint8Array): Uint8Array {
+  const version = new Uint8Array([0x02, 0x01, 0x00]);
+  const rsaAlgorithmIdentifier = new Uint8Array([
+    0x30, 0x0d,
+    0x06, 0x09, 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x01,
+    0x05, 0x00,
+  ]);
+  const privateKey = concatBytes(new Uint8Array([0x04]), derLength(pkcs1.length), pkcs1);
+  const body = concatBytes(version, rsaAlgorithmIdentifier, privateKey);
+  return concatBytes(new Uint8Array([0x30]), derLength(body.length), body);
+}
+
+function privateKeyDer(pem: string): ArrayBuffer {
+  if (pem.includes("BEGIN PRIVATE KEY")) {
+    return decodePem(pem, "PRIVATE KEY").buffer;
+  }
+
+  if (pem.includes("BEGIN RSA PRIVATE KEY")) {
+    return wrapPkcs1AsPkcs8(decodePem(pem, "RSA PRIVATE KEY")).buffer;
+  }
+
+  throw new Error("GITHUB_PRIVATE_KEY must be a PKCS#8 or RSA PEM private key");
 }
 
 async function importPrivateKey(pem: string): Promise<CryptoKey> {
-  if (!pem.includes("BEGIN PRIVATE KEY")) {
-    throw new Error(
-      "GITHUB_PRIVATE_KEY must be PKCS#8 PEM. Convert the GitHub key with: openssl pkcs8 -topk8 -nocrypt -in key.pem -out key-pkcs8.pem",
-    );
-  }
-
   return crypto.subtle.importKey(
     "pkcs8",
-    pemToArrayBuffer(pem),
+    privateKeyDer(pem),
     { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
     false,
     ["sign"],
@@ -108,6 +152,7 @@ export async function createAppJwt(appId: string, privateKey: string, now = Date
       iss: appId,
     }),
   );
+
   const unsignedToken = `${header}.${payload}`;
   const key = await importPrivateKey(privateKey);
   const signature = await crypto.subtle.sign(
@@ -115,6 +160,7 @@ export async function createAppJwt(appId: string, privateKey: string, now = Date
     key,
     new TextEncoder().encode(unsignedToken),
   );
+
   return `${unsignedToken}.${base64Url(new Uint8Array(signature))}`;
 }
 
@@ -186,6 +232,7 @@ async function listEnvironmentSecrets(token: string, fullName: string): Promise<
     );
     environments.push({ name: environment.name, secrets: secretResult.secrets });
   }
+
   return environments;
 }
 
@@ -218,5 +265,6 @@ export async function loadRepositoryDetails(
     listRepositorySecrets(token, fullName),
     listEnvironmentSecrets(token, fullName),
   ]);
+
   return { secrets, environments };
 }
