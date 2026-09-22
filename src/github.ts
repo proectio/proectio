@@ -120,13 +120,17 @@ function wrapPkcs1AsPkcs8(pkcs1: Uint8Array): Uint8Array {
   return concatBytes(new Uint8Array([0x30]), derLength(body.length), body);
 }
 
+function bytesToArrayBuffer(bytes: Uint8Array): ArrayBuffer {
+  return bytes.slice().buffer as ArrayBuffer;
+}
+
 function privateKeyDer(pem: string): ArrayBuffer {
   if (pem.includes("BEGIN PRIVATE KEY")) {
-    return decodePem(pem, "PRIVATE KEY").buffer;
+    return bytesToArrayBuffer(decodePem(pem, "PRIVATE KEY"));
   }
 
   if (pem.includes("BEGIN RSA PRIVATE KEY")) {
-    return wrapPkcs1AsPkcs8(decodePem(pem, "RSA PRIVATE KEY")).buffer;
+    return bytesToArrayBuffer(wrapPkcs1AsPkcs8(decodePem(pem, "RSA PRIVATE KEY")));
   }
 
   throw new Error("GITHUB_PRIVATE_KEY must be a PKCS#8 or RSA PEM private key");
