@@ -4,52 +4,86 @@ Personal GitHub repository inventory and configuration dashboard.
 
 Repory gives one read-only view of GitHub accounts, organizations, repositories, visibility, recent activity, environments, and secret names. It never reads or stores secret values.
 
+## Architecture
+
+```text
+GitHub
+  |
+  | CI: typecheck / tests / build
+  |
+  +----------------------------+
+                               |
+                               v
+                    Cloudflare Workers Builds
+                               |
+                               | deploy from main
+                               v
+                         Repory Worker
+                               |
+                               +-- GitHub App API
+                               +-- Worker Secrets
+```
+
+The normal production path is remote-first:
+
+- GitHub Actions verifies code only.
+- Cloudflare Workers Builds owns deployment.
+- Production credentials live in Cloudflare Worker Secrets.
+- A local computer is not required to deploy production.
+
 ## VS1
 
-The first vertical slice uses:
+- React + TypeScript dashboard
+- Cloudflare Worker backend
+- GitHub OAuth restricted to the configured owner login
+- GitHub App installation authentication
+- repository inventory across app installations
+- public/private/archived status and last-push activity
+- lazy loading of repository and environment secret names
+- no secret values
+- no database
 
-- React + TypeScript for the dashboard.
-- Cloudflare Worker for GitHub OAuth and GitHub App API access.
-- Cloudflare Workers static assets for the frontend.
-- No database.
+## GitHub App
 
-The Worker authenticates the owner with GitHub OAuth, then uses the ReporyHQ GitHub App installation to enumerate repositories. Secret metadata is loaded lazily per repository so a large GitHub account does not turn one dashboard request into hundreds of API subrequests.
+App: **ReporyHQ**
 
-## Required GitHub App permissions
+Public configuration committed in `wrangler.jsonc`:
 
-Repository permissions:
+- App ID: `5035680`
+- Client ID: `Iv23liRYQ460OIMG6JO8`
+- Owner login: `sergii`
+
+Required repository permissions:
 
 - Metadata: Read-only
 - Secrets: Read-only
 - Environments: Read-only
 
-Organization permissions:
+Required organization permissions:
 
 - Secrets: Read-only
 
-Everything else stays at No access for VS1.
+Everything else remains No access for VS1.
 
-## Local configuration
+## Runtime secrets
 
-Copy `.dev.vars.example` to `.dev.vars` and populate it locally. Never commit `.dev.vars` or the GitHub App private key.
+The following names are declared in `wrangler.jsonc` and must exist as Cloudflare Worker Secrets before deployment:
 
-Required values:
-
-- `GITHUB_APP_ID`
-- `GITHUB_PRIVATE_KEY` as PKCS#8 PEM
-- `GITHUB_CLIENT_ID`
+- `GITHUB_PRIVATE_KEY`
 - `GITHUB_CLIENT_SECRET`
-- `GITHUB_CALLBACK_URL`
 - `SESSION_SECRET`
-- `OWNER_LOGIN`
 
-A GitHub-generated PKCS#1 private key can be converted once with:
+GitHub-generated RSA PEM private keys are accepted directly. No local OpenSSL conversion is required.
 
-```bash
-openssl pkcs8 -topk8 -nocrypt -in reporyhq.pem -out reporyhq-pkcs8.pem
-```
+## Bootstrap
+
+Follow the detailed UI runbook:
+
+[docs/bootstrap.md](docs/bootstrap.md)
 
 ## Commands
+
+Local development is optional.
 
 ```bash
 npm install
@@ -58,12 +92,14 @@ npm run dev
 npm run dev:worker
 ```
 
-`npm run dev` runs only the Vite frontend. `npm run dev:worker` builds the frontend and starts the Cloudflare Worker so OAuth and `/api/inventory` are available.
+Production deployment should normally happen through Cloudflare Workers Builds rather than a local `wrangler deploy`.
 
 ## Security principles
 
-- Never read or store secret values.
-- GitHub App permissions stay read-only.
-- Inventory APIs require an authenticated owner session.
-- GitHub App credentials stay in Cloudflare secrets or local `.dev.vars` only.
-- No repository contents permission is requested.
+- Never read or store GitHub secret values.
+- Never commit runtime credentials.
+- Keep GitHub App permissions read-only.
+- Restrict the dashboard to the configured owner login.
+- Keep GitHub Actions verification-only.
+- Keep production credential values in Cloudflare.
+- No repository contents permission is requested by ReporyHQ.
