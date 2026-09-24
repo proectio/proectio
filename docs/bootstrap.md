@@ -60,7 +60,7 @@ are NOT the production GitHub App and do not prove one exists:
 - Legacy GitHub Client ID: `Iv23liRYQ460OIMG6JO8`
 - Legacy app page: <https://github.com/apps/reporyhq>
 - Allowed owner login (`OWNER_LOGIN`, an application allowlist — **not** app ownership): `sergii`
-- Desired app to register: **ProectioHQ**, owned by the `proectio` organization
+- Desired app to register: **Proectio Repo Observer**, owned by the `proectio` organization
 - Declared permissions for the desired app: metadata (read), secrets (read), environments (read)
 - Declared events: none
 
@@ -93,7 +93,7 @@ The Worker must exist before the bootstrap transfers secrets to it.
 
 ## 3. Bootstrap the GitHub App
 
-The desired app is the organization-owned `ProectioHQ` registered from
+The desired app is the organization-owned `Proectio Repo Observer` registered from
 `config/github-app-manifest.json`. It does not exist yet — the committed
 identifiers are stale legacy ReporyHQ state. The default command therefore
 reports that verification result and never creates anything:
@@ -110,7 +110,7 @@ The script:
 - reports the committed App ID / Client ID as stale legacy ReporyHQ identifiers
 - refuses to treat committed IDs as proof that the desired app exists
 
-### Registering ProectioHQ
+### Registering Proectio Repo Observer
 
 ```bash
 npm run bootstrap:github-app -- --create --org proectio --sync-cloudflare
@@ -122,7 +122,7 @@ already does.
 Flow:
 
 1. The script validates prerequisites and reads the manifest
-2. It verifies no desired org-owned ProectioHQ app exists yet, and detects the
+2. It verifies no desired org-owned Proectio Repo Observer app exists yet, and detects the
    committed identifiers as stale legacy state (it prints what will be replaced
    and asks you to type `replace`; `--force` skips that confirmation)
 3. It determines ownership as the `proectio` organization
@@ -146,18 +146,18 @@ for local development only.
 
 ### Duplicate protection
 
-- `--create` refuses only when a VERIFIED desired org-owned ProectioHQ app
+- `--create` refuses only when a VERIFIED desired org-owned Proectio Repo Observer app
   already exists (resolved from GitHub by slug and matching the committed
   client ID)
 - Committed App ID / Client ID that resolve to a different owner/app are stale
   legacy state: they do not block registration and get replaced
-- The tool never silently creates `ProectioHQ-2` style duplicates
+- The tool never silently creates `Proectio Repo Observer-2` style duplicates
 
 `npm run bootstrap:github-app -- --help` documents all options.
 
 ### Removing the legacy ReporyHQ app
 
-After ProectioHQ is registered, remove the legacy user-owned ReporyHQ app in a
+After Proectio Repo Observer is registered, remove the legacy user-owned ReporyHQ app in a
 separate manual step (the bootstrap must not delete it):
 
 1. Open <https://github.com/settings/apps> (user-level Developer settings)
@@ -205,7 +205,7 @@ Copy the exact URL.
 
 Return to:
 
-**GitHub > Settings > Developer settings > GitHub Apps > ProectioHQ > General**
+**GitHub > Settings > Developer settings > GitHub Apps > Proectio Repo Observer > General**
 
 Under **Identifying and authorizing users**:
 
@@ -222,9 +222,9 @@ Webhook can remain disabled for VS1; Proectio receives no webhook events.
 
 ## 6. Install the app
 
-Install ProectioHQ on the account whose repositories should be inventoried:
+Install Proectio Repo Observer on the account whose repositories should be inventoried:
 
-1. Open the ProectioHQ GitHub App installation page
+1. Open the Proectio Repo Observer GitHub App installation page
 2. Select the account
 3. Install the app
 4. Prefer **All repositories** for a complete inventory
@@ -269,16 +269,16 @@ Run the bootstrap once more to confirm the happy path:
 npm run bootstrap:github-app
 ```
 
-It must resolve the verified org-owned ProectioHQ app, report it as existing,
+It must resolve the verified org-owned Proectio Repo Observer app, report it as existing,
 and create nothing.
 
 ## Add organizations later
 
-The same ProectioHQ app can be installed on additional organizations.
+The same Proectio Repo Observer app can be installed on additional organizations.
 
 For each organization:
 
-1. Open the ProectioHQ GitHub App installation page
+1. Open the Proectio Repo Observer GitHub App installation page
 2. Select the organization
 3. Install the app
 4. Prefer **All repositories** for a complete inventory
