@@ -1,4 +1,4 @@
-# Repory production bootstrap
+# Proectio production bootstrap
 
 This runbook keeps the local computer out of the production deployment path.
 
@@ -12,7 +12,7 @@ GitHub repository
 Cloudflare Workers Builds
       |
       v
-Repory Worker
+Proectio Worker
       |
       +-- Cloudflare Worker Secrets
       +-- GitHub App API
@@ -28,7 +28,7 @@ GitHub Actions is verification-only. It does not deploy and it does not hold pro
 
 ## Production secrets
 
-Repory requires exactly three runtime secrets:
+Proectio requires exactly three runtime secrets:
 
 - `GITHUB_PRIVATE_KEY`
 - `GITHUB_CLIENT_SECRET`
@@ -43,7 +43,7 @@ Open GitHub:
 1. Avatar > **Settings**
 2. Left sidebar > **Developer settings**
 3. **GitHub Apps**
-4. Open **ReporyHQ**
+4. Open **ProectioHQ**
 5. Stay on **General**
 
 ### Client secret
@@ -57,12 +57,12 @@ Under **Client secrets**:
 
 ### Private key
 
-Still on the ReporyHQ **General** page, scroll to **Private keys**:
+Still on the ProectioHQ **General** page, scroll to **Private keys**:
 
 1. Select **Generate a private key**
 2. GitHub downloads a `.pem` file
 3. Keep the file only until the value is stored in Cloudflare
-4. No OpenSSL conversion is required; Repory accepts the GitHub-generated RSA PEM directly
+4. No OpenSSL conversion is required; Proectio accepts the GitHub-generated RSA PEM directly
 5. Do not commit the file
 
 The full file, including the BEGIN/END lines, becomes the value of `GITHUB_PRIVATE_KEY`.
@@ -71,7 +71,7 @@ The full file, including the BEGIN/END lines, becomes the value of `GITHUB_PRIVA
 
 Do not use the Webhook URL field.
 
-Leave the final callback URL until the Cloudflare Worker has a real `workers.dev` URL. Repory derives its OAuth callback from the request origin automatically.
+Leave the final callback URL until the Cloudflare Worker has a real `workers.dev` URL. Proectio derives its OAuth callback from the request origin automatically.
 
 ## 2. Create the Cloudflare Worker shell
 
@@ -80,18 +80,18 @@ Open the Cloudflare dashboard:
 1. **Workers & Pages**
 2. **Create application**
 3. Choose **Start with Hello World!** / **Create Worker**
-4. Name the Worker exactly **repory**
+4. Name the Worker exactly **proectio**
 5. Select **Deploy**
 
-The name must be exactly `repory` because Cloudflare requires the dashboard Worker name to match the `name` in `wrangler.jsonc`.
+The name must be exactly `proectio` because Cloudflare requires the dashboard Worker name to match the `name` in `wrangler.jsonc`.
 
-At this point the Hello World code is temporary. Git integration will replace it with Repory.
+At this point the Hello World code is temporary. Git integration will replace it with Proectio.
 
 ## 3. Add runtime secrets to Cloudflare
 
 Open:
 
-**Workers & Pages > repory > Settings > Variables and Secrets**
+**Workers & Pages > proectio > Settings > Variables and Secrets**
 
 Select **Add** and create three entries with type **Secret**.
 
@@ -124,12 +124,12 @@ Cloudflare hides secret values after they are saved.
 
 Open:
 
-**Workers & Pages > repory > Settings > Builds**
+**Workers & Pages > proectio > Settings > Builds**
 
 1. Select **Connect**
 2. Choose **GitHub**
 3. Authorize the Cloudflare GitHub integration if prompted
-4. Select repository **sergii/repory**
+4. Select repository **proectio/proectio**
 5. Configure:
    - Production branch: `main`
    - Root directory: repository root
@@ -148,24 +148,24 @@ No Cloudflare API token is required in the GitHub repository for this flow.
 
 ## 5. Configure the final GitHub OAuth callback
 
-After Repory has deployed, Cloudflare shows a URL similar to:
+After Proectio has deployed, Cloudflare shows a URL similar to:
 
 ```text
-https://repory.<your-workers-subdomain>.workers.dev
+https://proectio.<your-workers-subdomain>.workers.dev
 ```
 
 Copy the exact URL.
 
 Return to:
 
-**GitHub > Settings > Developer settings > GitHub Apps > ReporyHQ > General**
+**GitHub > Settings > Developer settings > GitHub Apps > ProectioHQ > General**
 
 Under **Identifying and authorizing users**:
 
 1. Select **Add callback URL**
 2. Enter:
    ```text
-   https://repory.<your-workers-subdomain>.workers.dev/auth/github/callback
+   https://proectio.<your-workers-subdomain>.workers.dev/auth/github/callback
    ```
 3. Save changes
 
@@ -178,7 +178,7 @@ Webhook can remain disabled for VS1.
 Open:
 
 ```text
-https://repory.<your-workers-subdomain>.workers.dev/api/health
+https://proectio.<your-workers-subdomain>.workers.dev/api/health
 ```
 
 Expected shape:
@@ -186,14 +186,14 @@ Expected shape:
 ```json
 {
   "ok": true,
-  "service": "repory",
+  "service": "proectio",
   "githubAppConfigured": true
 }
 ```
 
 Then open the Worker root URL and select **Sign in with GitHub**.
 
-Only the GitHub login configured as `OWNER_LOGIN` is allowed into Repory.
+Only the GitHub login configured as `OWNER_LOGIN` is allowed into Proectio.
 
 After login, verify:
 
@@ -206,17 +206,17 @@ After login, verify:
 
 ## 7. Add organizations later
 
-The same ReporyHQ app can be installed on additional organizations.
+The same ProectioHQ app can be installed on additional organizations.
 
 For each organization:
 
-1. Open the ReporyHQ GitHub App installation page
+1. Open the ProectioHQ GitHub App installation page
 2. Select the organization
 3. Install the app
 4. Prefer **All repositories** for a complete inventory
 5. Keep the app permissions read-only
 
-Repory will discover the additional installation without a code change.
+Proectio will discover the additional installation without a code change.
 
 ## Credential lifecycle
 
