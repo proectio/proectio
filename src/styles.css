@@ -52,3 +52,9 @@ summary { cursor: pointer; }
 .secret-comparison code[data-presence="both"] { font-weight: 700; }
 .secret-comparison code[data-presence="github-only"],
 .secret-comparison code[data-presence="cloudflare-only"] { border: 1px solid #d8d8d2; }
+
+.secret-comparison code[data-verdict="expected"] { font-weight: 700; }
+.secret-comparison code[data-verdict="missing"],
+.secret-comparison code[data-verdict="misplaced"] { border: 1px solid #999; }
+.secret-comparison code[data-verdict="unexpected"] { border-style: dashed; }
+.secret-comparison code[data-verdict="unmanaged"] { opacity: .72; }

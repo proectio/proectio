@@ -7,7 +7,13 @@ type DetailsResponse = { details: RepositoryDetails } | { error: string };
 type SecretInventoryResponse = {
   githubNames: string[];
   cloudflareNames: string[];
-  comparison: Array<{ name: string; presence: "github-only" | "cloudflare-only" | "both" }>;
+  comparison: Array<{
+    name: string;
+    presence: "github-only" | "cloudflare-only" | "both" | "missing";
+    expected: Array<"github" | "cloudflare">;
+    actual: Array<"github" | "cloudflare">;
+    verdict: "expected" | "missing" | "unexpected" | "misplaced" | "unmanaged";
+  }>;
   cloudflare: { configured: boolean; worker?: string };
 } | { error: string };
 type Filter = "all" | "public" | "private" | "archived";
@@ -181,8 +187,9 @@ export default function App() {
                               <span>Cloudflare inventory is not configured for this repository.</span>
                             )}
                             {secretInventory[repository.full_name].comparison.map((item) => (
-                              <code key={item.name} data-presence={item.presence}>
-                                {item.name} · {item.presence}
+                              <code key={item.name} data-presence={item.presence} data-verdict={item.verdict}>
+                                {item.name} · {item.verdict}
+                                {item.expected.length > 0 ? ` · expected: ${item.expected.join("+")}` : ""}
                               </code>
                             ))}
                             {secretInventory[repository.full_name].cloudflare.configured &&

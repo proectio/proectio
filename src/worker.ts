@@ -1,7 +1,9 @@
+import secretPlacementPolicy from "../config/secret-placement-policy.json";
 import { cookie, createSession, readCookie, verifySession } from "./auth";
 import { loadInventory, loadRepositoryDetails } from "./github";
 import { listWorkerSecretNames } from "./cloudflare";
 import { compareSecretNames } from "./secret-inventory";
+import type { SecretPlacementPolicy } from "./secret-inventory";
 
 interface Env {
   ASSETS: Fetcher;
@@ -144,16 +146,7 @@ export default {
     }
 
     if (url.pathname === "/api/session") {
-      const sessionValue = readCookie(request, sessionCookie);
-      return json({
-        authenticated: await isAuthenticated(request, env),
-        diagnostics: {
-          sessionCookiePresent: Boolean(sessionValue),
-          sessionCookieParts: sessionValue ? sessionValue.split("|").length : 0,
-          sessionSecretConfigured: Boolean(env.SESSION_SECRET),
-          ownerLoginConfigured: Boolean(env.OWNER_LOGIN),
-        },
-      });
+      return json({ authenticated: await isAuthenticated(request, env) });
     }
 
     if (url.pathname === "/api/inventory") {
@@ -199,7 +192,11 @@ export default {
           return json({
             githubNames: [...new Set(githubNames)].sort(),
             cloudflareNames: [],
-            comparison: [],
+            comparison: compareSecretNames(
+              githubNames,
+              [],
+              (secretPlacementPolicy.repositories[fullName as keyof typeof secretPlacementPolicy.repositories] ?? {}) as SecretPlacementPolicy,
+            ),
             cloudflare: { configured: false },
           });
         }
@@ -214,7 +211,11 @@ export default {
         return json({
           githubNames: [...new Set(githubNames)].sort(),
           cloudflareNames: [...new Set(cloudflareNames)].sort(),
-          comparison: compareSecretNames(githubNames, cloudflareNames),
+          comparison: compareSecretNames(
+            githubNames,
+            cloudflareNames,
+            (secretPlacementPolicy.repositories[fullName as keyof typeof secretPlacementPolicy.repositories] ?? {}) as SecretPlacementPolicy,
+          ),
           cloudflare: {
             configured: true,
             worker: env.CLOUDFLARE_WORKER_NAME,
