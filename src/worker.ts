@@ -3,6 +3,7 @@ import { cookie, createSession, readCookie, verifySession } from "./auth";
 import { loadInventory, loadRepositoryDetails } from "./github";
 import { listWorkerSecretNames } from "./cloudflare";
 import { compareSecretNames } from "./secret-inventory";
+import type { SecretPlacementPolicy } from "./secret-inventory";
 
 interface Env {
   ASSETS: Fetcher;
@@ -194,7 +195,7 @@ export default {
             comparison: compareSecretNames(
               githubNames,
               [],
-              secretPlacementPolicy.repositories[fullName as keyof typeof secretPlacementPolicy.repositories] ?? {},
+              (secretPlacementPolicy.repositories[fullName as keyof typeof secretPlacementPolicy.repositories] ?? {}) as SecretPlacementPolicy,
             ),
             cloudflare: { configured: false },
           });
@@ -213,7 +214,7 @@ export default {
           comparison: compareSecretNames(
             githubNames,
             cloudflareNames,
-            secretPlacementPolicy.repositories[fullName as keyof typeof secretPlacementPolicy.repositories] ?? {},
+            (secretPlacementPolicy.repositories[fullName as keyof typeof secretPlacementPolicy.repositories] ?? {}) as SecretPlacementPolicy,
           ),
           cloudflare: {
             configured: true,
