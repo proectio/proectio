@@ -31,7 +31,9 @@ const sessionCookie = "proectio_session";
 const oauthStateCookie = "proectio_oauth_state";
 
 function json(data: unknown, status = 200, headers: HeadersInit = {}): Response {
-  return Response.json(data, { status, headers });
+  const responseHeaders = new Headers(headers);
+  responseHeaders.set("Cache-Control", "no-store");
+  return Response.json(data, { status, headers: responseHeaders });
 }
 
 function randomState(): string {
@@ -62,6 +64,7 @@ async function beginGitHubAuth(request: Request, env: Env): Promise<Response> {
     status: 302,
     headers: {
       Location: authorize.toString(),
+      "Cache-Control": "no-store",
       "Set-Cookie": cookie(oauthStateCookie, state, 10 * 60, secureCookies(request)),
     },
   });
@@ -108,13 +111,14 @@ async function finishGitHubAuth(request: Request, env: Env): Promise<Response> {
   }
 
   const session = await createSession(env.OWNER_LOGIN, env.SESSION_SECRET);
-  return new Response(null, {
-    status: 302,
-    headers: {
-      Location: "/",
-      "Set-Cookie": cookie(sessionCookie, session, 12 * 60 * 60, secureCookies(request)),
-    },
+  const headers = new Headers({
+    Location: "/",
+    "Cache-Control": "no-store",
   });
+  headers.append("Set-Cookie", cookie(sessionCookie, session, 12 * 60 * 60, secureCookies(request)));
+  headers.append("Set-Cookie", cookie(oauthStateCookie, "", 0, secureCookies(request)));
+
+  return new Response(null, { status: 302, headers });
 }
 
 export default {
