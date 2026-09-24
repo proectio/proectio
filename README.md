@@ -84,6 +84,26 @@ npm run configure:cloudflare-inventory -- --deploy
 
 For automation, `--account-id`, `--worker`, and `--repository` are supported.
 
+## VS3: expected-state secret placement policy
+
+Proectio can compare observed secret-name placement with a committed expected-state policy in
+`config/secret-placement-policy.json`.
+
+Each secret receives a placement verdict:
+
+- `expected` — actual providers exactly match policy
+- `missing` — one or more expected providers do not contain the secret name
+- `unexpected` — the secret exists in an extra provider beyond policy
+- `misplaced` — an expected provider is missing while an unexpected provider contains it
+- `unmanaged` — an observed secret name has no policy entry
+
+Policy-only names are included in the comparison, so Proectio can report a missing secret even
+when it exists in neither provider. Policy contains names and provider placement only; no secret
+values are committed, read, or stored.
+
+The initial Proectio policy expects its four Worker runtime credentials only in Cloudflare:
+`CLOUDFLARE_API_TOKEN`, `GITHUB_CLIENT_SECRET`, `GITHUB_PRIVATE_KEY`, and `SESSION_SECRET`.
+
 
 ## GitHub App
 
