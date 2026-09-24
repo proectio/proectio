@@ -172,7 +172,7 @@ export default function App() {
                     <td>
                       <strong>{repository.name}</strong>
                       {repository.archived && <span className="tag">Archived</span>}
-                      <details open>
+                      <details open={true}>
                         <summary>
                           {detailLoading[repository.full_name] && <span className="spinner" aria-hidden="true" />}
                           {detailLoading[repository.full_name] ? "Loading secret names…" : "Secret names"}
@@ -187,7 +187,7 @@ export default function App() {
                           </div>
                         )}
                       </details>
-                      <details open>
+                      <details open={true}>
                         <summary>
                           {inventoryLoading[repository.full_name] && <span className="spinner" aria-hidden="true" />}
                           {inventoryLoading[repository.full_name] ? "Comparing providers…" : "GitHub ↔ Cloudflare"}
