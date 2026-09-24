@@ -1,8 +1,8 @@
-# Repory
+# Proectio
 
 Personal GitHub repository inventory and configuration dashboard.
 
-Repory gives one read-only view of GitHub accounts, organizations, repositories, visibility, recent activity, environments, and secret names. It never reads or stores secret values.
+Proectio gives one read-only view of GitHub accounts, organizations, repositories, visibility, recent activity, environments, and secret names. It never reads or stores secret values.
 
 ## Architecture
 
@@ -18,7 +18,7 @@ GitHub
                                |
                                | deploy from main
                                v
-                         Repory Worker
+                         Proectio Worker
                                |
                                +-- GitHub App API
                                +-- Worker Secrets
@@ -45,7 +45,7 @@ The normal production path is remote-first:
 
 ## GitHub App
 
-App: **ReporyHQ**
+App: **ProectioHQ**
 
 Public configuration committed in `wrangler.jsonc`:
 
@@ -102,4 +102,4 @@ Production deployment should normally happen through Cloudflare Workers Builds r
 - Restrict the dashboard to the configured owner login.
 - Keep GitHub Actions verification-only.
 - Keep production credential values in Cloudflare.
-- No repository contents permission is requested by ReporyHQ.
+- No repository contents permission is requested by ProectioHQ.
