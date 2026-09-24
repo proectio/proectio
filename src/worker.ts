@@ -159,7 +159,7 @@ export default {
 
       const installationId = Number(url.searchParams.get("installationId"));
       const fullName = url.searchParams.get("repo") ?? "";
-      if (!Number.isInteger(installationId) || installationId <= 0 || !/^[^/]+\\/[^/]+$/.test(fullName)) {
+      if (!Number.isInteger(installationId) || installationId <= 0 || !/^[^/]+\/[^/]+$/.test(fullName)) {
         return json({ error: "Invalid secret inventory request" }, 400);
       }
 
