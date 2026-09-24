@@ -25,13 +25,21 @@ function secretCount(details: RepositoryDetails | undefined): number | null {
   return details.secrets.length + details.environments.reduce((sum, environment) => sum + environment.secrets.length, 0);
 }
 
+function providerLabel(provider: "github" | "cloudflare"): string {
+  return provider === "github" ? "GitHub" : "Cloudflare";
+}
+
+function providerList(providers: Array<"github" | "cloudflare">): string {
+  return providers.map(providerLabel).join(" + ");
+}
+
 function placementDescription(item: SecretInventory["comparison"][number]): string {
-  const expected = item.expected.join(" + ");
-  const actual = item.actual.join(" + ");
+  const expected = providerList(item.expected);
+  const actual = providerList(item.actual);
 
   switch (item.verdict) {
     case "expected":
-      return `Expected in ${expected || actual || "configured provider"}`;
+      return expected || actual || "Configured provider";
     case "missing":
       return `Missing from ${expected || "expected provider"}`;
     case "unexpected":
@@ -237,8 +245,8 @@ export default function App() {
                 <th>Owner</th>
                 <th>Visibility</th>
                 <th>Last push</th>
-                <th>GitHub secrets</th>
-                <th>Environments</th>
+                <th>GH secrets</th>
+                <th>GH environments</th>
               </tr>
             </thead>
             <tbody>
@@ -258,8 +266,20 @@ export default function App() {
                           <strong>{repository.name}</strong>
                           {repository.archived && <span className="tag">Archived</span>}
                           {inventory && (
-                            <span className={placementIssues === 0 ? "health health-ok" : "health health-warning"}>
-                              {placementIssues === 0 ? "In sync" : `${placementIssues} issue${placementIssues === 1 ? "" : "s"}`}
+                            <span
+                              className={placementIssues === 0 ? "health health-ok" : "health health-warning"}
+                              title={
+                                placementIssues === 0
+                                  ? "All observed secret placements match policy"
+                                  : `${placementIssues} secret placement issue${placementIssues === 1 ? "" : "s"}`
+                              }
+                            >
+                              {placementIssues === 0 ? "Secrets in sync" : `${placementIssues} secret issue${placementIssues === 1 ? "" : "s"}`}
+                            </span>
+                          )}
+                          {inventory && (
+                            <span className="provider-summary">
+                              GitHub {inventory.githubNames.length} · Cloudflare {inventory.cloudflareNames.length}
                             </span>
                           )}
                         </div>
@@ -300,7 +320,7 @@ export default function App() {
                             <div className="secret-panel-header">
                               <div>
                                 <strong>GitHub</strong>
-                                <span>Repository and environment secrets</span>
+                                <span>Repository: {fullName}</span>
                               </div>
                               {inventoryLoading[fullName] && !inventory ? (
                                 <span className="inline-loading"><span className="spinner" aria-hidden="true" />Loading</span>
