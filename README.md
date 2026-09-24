@@ -45,7 +45,7 @@ The normal production path is remote-first:
 
 ## GitHub App
 
-Desired app: **ProectioHQ**, owned by the `proectio` organization.
+Desired app: **Proectio Repo Observer**, owned by the `proectio` organization.
 
 Source of truth: the committed GitHub App manifest
 [`config/github-app-manifest.json`](config/github-app-manifest.json).
@@ -53,7 +53,7 @@ Source of truth: the committed GitHub App manifest
 Public configuration committed in `wrangler.jsonc` (currently stale legacy
 state — App ID `5035680` / Client ID `Iv23liRYQ460OIMG6JO8` belong to
 **ReporyHQ**, a user-owned app under `sergii`; they are replaced when
-ProectioHQ is registered):
+Proectio Repo Observer is registered):
 
 - Allowed owner login (`OWNER_LOGIN`, an application allowlist — **not** app ownership): `sergii`
 
@@ -69,7 +69,7 @@ No organization permission is requested. Proectio never calls an organization
 API endpoint, so none is granted. No webhook events are requested because the
 implementation does not receive webhooks. `public` is `false`.
 
-`script/bootstrap_github_app.mjs` verifies that the desired org-owned ProectioHQ
+`script/bootstrap_github_app.mjs` verifies that the desired org-owned Proectio Repo Observer
 app exists and never creates a duplicate; committed identifiers that resolve to
 a different app are treated as stale legacy state.
 
@@ -90,10 +90,10 @@ The GitHub App is bootstrapped reproducibly from the committed manifest
 
 ```bash
 npm run bootstrap:github-app                 # verify the desired org-owned app; never creates a duplicate
-npm run bootstrap:github-app -- --create     # register ProectioHQ from the manifest, replacing stale legacy IDs
+npm run bootstrap:github-app -- --create     # register Proectio Repo Observer from the manifest, replacing stale legacy IDs
 ```
 
-The default command resolves the desired org-owned ProectioHQ app (by slug, on
+The default command resolves the desired org-owned Proectio Repo Observer app (by slug, on
 GitHub) and verifies it without creating anything. `--create` registers the app
 through the GitHub App manifest flow, replaces the stale legacy ReporyHQ
 identifiers in config, and stores generated secrets without ever printing them.
@@ -122,4 +122,4 @@ Production deployment should normally happen through Cloudflare Workers Builds r
 - Restrict the dashboard to the configured owner login.
 - Keep GitHub Actions verification-only.
 - Keep production credential values in Cloudflare.
-- No repository contents permission is requested by ProectioHQ.
+- No repository contents permission is requested by Proectio Repo Observer.
