@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import type { InstallationInventory, RepositoryDetails } from "./github";
 import { formatExactTime, formatRelativeTime, getDetectedTimeZone, listTimeZones } from "./time";
 
@@ -251,8 +251,8 @@ export default function App() {
                 const refreshing = Boolean(detailLoading[fullName] || inventoryLoading[fullName]);
 
                 return (
-                  <>
-                    <tr key={`${repository.id}:summary`} className="repository-row">
+                  <Fragment key={repository.id}>
+                    <tr className="repository-row">
                       <td>
                         <div className="repository-name-line">
                           <strong>{repository.name}</strong>
@@ -277,7 +277,7 @@ export default function App() {
                           (detailLoading[fullName] ? <span className="spinner" aria-label="Loading environment count" /> : "—")}
                       </td>
                     </tr>
-                    <tr key={`${repository.id}:details`} className="repository-details-row">
+                    <tr className="repository-details-row">
                       <td colSpan={6}>
                         <div className="repository-details-header">
                           <div>
@@ -369,7 +369,7 @@ export default function App() {
                         )}
                       </td>
                     </tr>
-                  </>
+                  </Fragment>
                 );
               })}
             </tbody>
