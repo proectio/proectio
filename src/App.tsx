@@ -66,10 +66,10 @@ function RelativeTime({
     <span className="relative-time" tabIndex={0}>
       {formatRelativeTime(value, now)}
       <span className="time-tooltip" role="tooltip">
+        <strong>Local · {timeZone}</strong>
+        <span>{formatExactTime(value, timeZone)}</span>
         <strong>UTC</strong>
         <span>{formatExactTime(value, "UTC")}</span>
-        <strong>{timeZone}</strong>
-        <span>{formatExactTime(value, timeZone)}</span>
       </span>
     </span>
   );
@@ -263,24 +263,26 @@ export default function App() {
                     <tr className="repository-row">
                       <td>
                         <div className="repository-name-line">
-                          <strong>{repository.name}</strong>
-                          {repository.archived && <span className="tag">Archived</span>}
+                          <div className="repository-primary">
+                            <strong>{repository.name}</strong>
+                            {repository.archived && <span className="tag">Archived</span>}
+                          </div>
                           {inventory && (
-                            <span
-                              className={placementIssues === 0 ? "health health-ok" : "health health-warning"}
-                              title={
-                                placementIssues === 0
-                                  ? "All observed secret placements match policy"
-                                  : `${placementIssues} secret placement issue${placementIssues === 1 ? "" : "s"}`
-                              }
-                            >
-                              {placementIssues === 0 ? "Secrets in sync" : `${placementIssues} secret issue${placementIssues === 1 ? "" : "s"}`}
-                            </span>
-                          )}
-                          {inventory && (
-                            <span className="provider-summary">
-                              GitHub {inventory.githubNames.length} · Cloudflare {inventory.cloudflareNames.length}
-                            </span>
+                            <div className="repository-meta">
+                              <span
+                                className={placementIssues === 0 ? "health health-ok" : "health health-warning"}
+                                title={
+                                  placementIssues === 0
+                                    ? "All observed secret placements match policy"
+                                    : `${placementIssues} secret placement issue${placementIssues === 1 ? "" : "s"}`
+                                }
+                              >
+                                {placementIssues === 0 ? "Secrets in sync" : `${placementIssues} secret issue${placementIssues === 1 ? "" : "s"}`}
+                              </span>
+                              <span className="provider-summary">
+                                GitHub {inventory.githubNames.length} · Cloudflare {inventory.cloudflareNames.length}
+                              </span>
+                            </div>
                           )}
                         </div>
                       </td>
@@ -309,7 +311,7 @@ export default function App() {
                             onClick={() => void refreshRepository(installation.installationId, fullName)}
                             disabled={refreshing}
                             aria-label={`Refresh ${fullName}`}
-                            title="Refresh repository inspection"
+                            title="Refresh secrets inventory"
                           >
                             {refreshing ? <span className="spinner" aria-hidden="true" /> : "↻"}
                           </button>
@@ -375,7 +377,7 @@ export default function App() {
                             {inventory.comparison.length === 0 ? (
                               <span className="empty-state">No secrets to evaluate.</span>
                             ) : (
-                              <div className="placement-list">
+                              <div className={placementIssues === 0 ? "placement-list placement-list-healthy" : "placement-list"}>
                                 {inventory.comparison.map((item) => (
                                   <div className="placement-item" key={item.name} data-verdict={item.verdict}>
                                     <code>{item.name}</code>
