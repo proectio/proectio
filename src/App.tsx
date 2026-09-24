@@ -4,6 +4,12 @@ import type { InstallationInventory, RepositoryDetails } from "./github";
 type SessionResponse = { authenticated: boolean };
 type InventoryResponse = { installations: InstallationInventory[] } | { error: string };
 type DetailsResponse = { details: RepositoryDetails } | { error: string };
+type SecretInventoryResponse = {
+  githubNames: string[];
+  cloudflareNames: string[];
+  comparison: Array<{ name: string; presence: "github-only" | "cloudflare-only" | "both" }>;
+  cloudflare: { configured: boolean; worker?: string };
+} | { error: string };
 type Filter = "all" | "public" | "private" | "archived";
 
 function formatDate(value: string | null): string {
@@ -21,6 +27,8 @@ export default function App() {
   const [installations, setInstallations] = useState<InstallationInventory[]>([]);
   const [details, setDetails] = useState<Record<string, RepositoryDetails>>({});
   const [detailLoading, setDetailLoading] = useState<Record<string, boolean>>({});
+  const [secretInventory, setSecretInventory] = useState<Record<string, Exclude<SecretInventoryResponse, { error: string }>>>({});
+  const [inventoryLoading, setInventoryLoading] = useState<Record<string, boolean>>({});
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [filter, setFilter] = useState<Filter>("all");
@@ -70,6 +78,22 @@ export default function App() {
       setError(reason instanceof Error ? reason.message : "Details request failed");
     } finally {
       setDetailLoading((current) => ({ ...current, [fullName]: false }));
+    }
+  }
+
+  async function loadSecretInventory(installationId: number, fullName: string) {
+    if (secretInventory[fullName] || inventoryLoading[fullName]) return;
+    setInventoryLoading((current) => ({ ...current, [fullName]: true }));
+    try {
+      const params = new URLSearchParams({ installationId: String(installationId), repo: fullName });
+      const response = await fetch(`/api/secret-inventory?${params}`);
+      const body = (await response.json()) as SecretInventoryResponse;
+      if (!response.ok || "error" in body) throw new Error("error" in body ? body.error : "Secret inventory request failed");
+      setSecretInventory((current) => ({ ...current, [fullName]: body }));
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Secret inventory request failed");
+    } finally {
+      setInventoryLoading((current) => ({ ...current, [fullName]: false }));
     }
   }
 
@@ -144,6 +168,25 @@ export default function App() {
                               environment.secrets.map((secret) => <code key={`${environment.name}:${secret.name}`}>{environment.name}: {secret.name}</code>),
                             )}
                             {count === 0 && <span>None</span>}
+                          </div>
+                        )}
+                      </details>
+                      <details onToggle={(event) => {
+                        if (event.currentTarget.open) void loadSecretInventory(installation.installationId, repository.full_name);
+                      }}>
+                        <summary>{inventoryLoading[repository.full_name] ? "Comparing providers…" : "GitHub ↔ Cloudflare"}</summary>
+                        {secretInventory[repository.full_name] && (
+                          <div className="secret-comparison">
+                            {!secretInventory[repository.full_name].cloudflare.configured && (
+                              <span>Cloudflare inventory is not configured for this repository.</span>
+                            )}
+                            {secretInventory[repository.full_name].comparison.map((item) => (
+                              <code key={item.name} data-presence={item.presence}>
+                                {item.name} · {item.presence}
+                              </code>
+                            ))}
+                            {secretInventory[repository.full_name].cloudflare.configured &&
+                              secretInventory[repository.full_name].comparison.length === 0 && <span>No secret names found.</span>}
                           </div>
                         )}
                       </details>
