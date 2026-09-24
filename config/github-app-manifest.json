@@ -1,5 +1,5 @@
 {
-  "name": "ProectioHQ",
+  "name": "Proectio Repo Observer",
   "url": "https://github.com/proectio/proectio",
   "description": "Read-only GitHub repository inventory and configuration dashboard for Proectio.",
   "redirect_url": "http://127.0.0.1:4567/github-app-manifest/callback",
