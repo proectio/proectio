@@ -73,14 +73,14 @@ export default function App() {
     }
   }
 
-  if (authenticated === null) return <main className="shell"><p>Loading Repory…</p></main>;
+  if (authenticated === null) return <main className="shell"><p>Loading Proectio…</p></main>;
 
   if (!authenticated) {
     return (
       <main className="shell auth-shell">
         <div className="auth-card">
           <p className="eyebrow">Personal GitHub inventory</p>
-          <h1>Repory</h1>
+          <h1>Proectio</h1>
           <p>One read-only view of repositories, visibility, recent activity, environments, and secret names.</p>
           <a className="button" href="/auth/github">Sign in with GitHub</a>
         </div>
@@ -93,7 +93,7 @@ export default function App() {
       <header className="header">
         <div>
           <p className="eyebrow">GitHub control panel</p>
-          <h1>Repory</h1>
+          <h1>Proectio</h1>
         </div>
         <button className="secondary" onClick={() => fetch("/auth/logout", { method: "POST" }).then(() => location.reload())}>
           Sign out

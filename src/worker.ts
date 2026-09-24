@@ -21,8 +21,8 @@ interface GitHubUser {
   login: string;
 }
 
-const sessionCookie = "repory_session";
-const oauthStateCookie = "repory_oauth_state";
+const sessionCookie = "proectio_session";
+const oauthStateCookie = "proectio_oauth_state";
 
 function json(data: unknown, status = 200, headers: HeadersInit = {}): Response {
   return Response.json(data, { status, headers });
@@ -92,13 +92,13 @@ async function finishGitHubAuth(request: Request, env: Env): Promise<Response> {
       Accept: "application/vnd.github+json",
       Authorization: `Bearer ${token.access_token}`,
       "X-GitHub-Api-Version": "2022-11-28",
-      "User-Agent": "Repory",
+      "User-Agent": "Proectio",
     },
   });
 
   const user = (await userResponse.json()) as GitHubUser;
   if (!userResponse.ok || user.login.toLowerCase() !== env.OWNER_LOGIN.toLowerCase()) {
-    return json({ error: "This GitHub account is not allowed to access Repory" }, 403);
+    return json({ error: "This GitHub account is not allowed to access Proectio" }, 403);
   }
 
   const session = await createSession(env.OWNER_LOGIN, env.SESSION_SECRET);
@@ -118,7 +118,7 @@ export default {
     if (url.pathname === "/api/health") {
       return json({
         ok: true,
-        service: "repory",
+        service: "proectio",
         githubAppConfigured: Boolean(env.GITHUB_APP_ID && env.GITHUB_CLIENT_ID),
       });
     }
