@@ -144,7 +144,16 @@ export default {
     }
 
     if (url.pathname === "/api/session") {
-      return json({ authenticated: await isAuthenticated(request, env) });
+      const sessionValue = readCookie(request, sessionCookie);
+      return json({
+        authenticated: await isAuthenticated(request, env),
+        diagnostics: {
+          sessionCookiePresent: Boolean(sessionValue),
+          sessionCookieParts: sessionValue ? sessionValue.split("|").length : 0,
+          sessionSecretConfigured: Boolean(env.SESSION_SECRET),
+          ownerLoginConfigured: Boolean(env.OWNER_LOGIN),
+        },
+      });
     }
 
     if (url.pathname === "/api/inventory") {
