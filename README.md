@@ -67,6 +67,23 @@ Required Cloudflare runtime configuration:
 
 The Cloudflare API call is read-only and returns secret names/types, not values.
 
+Repeatable bootstrap:
+
+```bash
+npm run configure:cloudflare-inventory
+```
+
+The bootstrap verifies Wrangler authentication, auto-detects the account ID when possible,
+preserves an existing `CLOUDFLARE_API_TOKEN` Worker secret, securely prompts only when the
+secret is absent, writes non-secret mapping values to `wrangler.jsonc`, runs `npm run check`,
+and deploys only when explicitly invoked with:
+
+```bash
+npm run configure:cloudflare-inventory -- --deploy
+```
+
+For automation, `--account-id`, `--worker`, and `--repository` are supported.
+
 
 ## GitHub App
 
