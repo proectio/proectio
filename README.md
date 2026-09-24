@@ -43,6 +43,31 @@ The normal production path is remote-first:
 - no secret values
 - no database
 
+## VS2: cross-provider secret-name inventory
+
+Proectio can compare secret names between a GitHub repository and its mapped Cloudflare Worker without reading secret values.
+
+For `proectio/proectio`, the current mapping is:
+
+- GitHub repository: `proectio/proectio`
+- Cloudflare Worker: `proectio`
+
+The comparison classifies each name as:
+
+- `both`
+- `github-only`
+- `cloudflare-only`
+
+Cloudflare access is optional. If it is not configured, GitHub inventory continues to work and the UI reports that Cloudflare inventory is not configured.
+
+Required Cloudflare runtime configuration:
+
+- `CLOUDFLARE_ACCOUNT_ID` — non-secret account identifier
+- `CLOUDFLARE_API_TOKEN` — secret token with read access sufficient to list Worker secret names
+
+The Cloudflare API call is read-only and returns secret names/types, not values.
+
+
 ## GitHub App
 
 Desired app: **Proectio Repo Observer**, owned by the `proectio` organization.
