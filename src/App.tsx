@@ -103,6 +103,15 @@ export default function App() {
     }
   }
 
+  useEffect(() => {
+    if (!authenticated || repositories.length === 0) return;
+
+    for (const { installation, repository } of repositories) {
+      void loadDetails(installation.installationId, repository.full_name);
+      void loadSecretInventory(installation.installationId, repository.full_name);
+    }
+  }, [authenticated, repositories]);
+
   if (authenticated === null) return <main className="shell"><p>Loading Proectio…</p></main>;
 
   if (!authenticated) {
@@ -163,10 +172,11 @@ export default function App() {
                     <td>
                       <strong>{repository.name}</strong>
                       {repository.archived && <span className="tag">Archived</span>}
-                      <details onToggle={(event) => {
-                        if (event.currentTarget.open) void loadDetails(installation.installationId, repository.full_name);
-                      }}>
-                        <summary>{detailLoading[repository.full_name] ? "Loading secret names…" : "Secret names"}</summary>
+                      <details open={true}>
+                        <summary>
+                          {detailLoading[repository.full_name] && <span className="spinner" aria-hidden="true" />}
+                          {detailLoading[repository.full_name] ? "Loading secret names…" : "Secret names"}
+                        </summary>
                         {repositoryDetails && (
                           <div className="secret-list">
                             {repositoryDetails.secrets.map((secret) => <code key={secret.name}>{secret.name}</code>)}
@@ -177,10 +187,11 @@ export default function App() {
                           </div>
                         )}
                       </details>
-                      <details onToggle={(event) => {
-                        if (event.currentTarget.open) void loadSecretInventory(installation.installationId, repository.full_name);
-                      }}>
-                        <summary>{inventoryLoading[repository.full_name] ? "Comparing providers…" : "GitHub ↔ Cloudflare"}</summary>
+                      <details open={true}>
+                        <summary>
+                          {inventoryLoading[repository.full_name] && <span className="spinner" aria-hidden="true" />}
+                          {inventoryLoading[repository.full_name] ? "Comparing providers…" : "GitHub ↔ Cloudflare"}
+                        </summary>
                         {secretInventory[repository.full_name] && (
                           <div className="secret-comparison">
                             {!secretInventory[repository.full_name].cloudflare.configured && (

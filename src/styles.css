@@ -58,3 +58,15 @@ summary { cursor: pointer; }
 .secret-comparison code[data-verdict="misplaced"] { border: 1px solid #999; }
 .secret-comparison code[data-verdict="unexpected"] { border-style: dashed; }
 .secret-comparison code[data-verdict="unmanaged"] { opacity: .72; }
+
+summary { display: flex; align-items: center; gap: 6px; }
+.spinner {
+  width: 11px;
+  height: 11px;
+  border: 2px solid #d2d2cc;
+  border-top-color: #171717;
+  border-radius: 50%;
+  display: inline-block;
+  animation: spin .7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
