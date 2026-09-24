@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "check": "npm run typecheck && npm test && vite build",
-    "deploy": "npm run build && wrangler deploy"
+    "deploy": "npm run build && wrangler deploy",
+    "bootstrap:github-app": "node script/bootstrap_github_app.mjs"
   },
   "dependencies": {
     "@vitejs/plugin-react": "latest",

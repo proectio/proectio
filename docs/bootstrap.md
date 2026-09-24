@@ -20,58 +20,58 @@ Proectio Worker
 
 GitHub Actions is verification-only. It does not deploy and it does not hold production credentials.
 
-## Values already committed as non-secret configuration
+## GitHub App bootstrap flow
 
-- GitHub App ID: `5035680`
-- GitHub Client ID: `Iv23liRYQ460OIMG6JO8`
-- Allowed owner login: `sergii`
+```text
+repository
+   |
+   v
+authenticated gh
+   |
+   v
+bootstrap GitHub App script
+   |
+   v
+GitHub Manifest registration
+   |
+   v
+manifest code conversion via gh api
+   |
+   +--> non-secret IDs -> wrangler.jsonc + config/github-app-state.json
+   |
+   +--> generated secrets -> Cloudflare Worker Secrets
+   |
+   v
+verification
+```
 
-## Production secrets
+The GitHub App configuration is source-controlled in
+`config/github-app-manifest.json` and is driven by
+`script/bootstrap_github_app.mjs`. Nothing is filled out by hand in the GitHub
+Settings form except one confirmation click during a fresh registration.
 
-Proectio requires exactly three runtime secrets:
+## Committed non-secret configuration
 
-- `GITHUB_PRIVATE_KEY`
-- `GITHUB_CLIENT_SECRET`
-- `SESSION_SECRET`
+The committed identifiers are legacy bootstrap state from the Repory era. They
+are NOT the production GitHub App and do not prove one exists:
 
-The names are declared in `wrangler.jsonc`; their values exist only in Cloudflare.
+- Legacy GitHub App (verified by API): **ReporyHQ**, user-owned by `sergii`
+- Legacy GitHub App ID: `5035680`
+- Legacy GitHub Client ID: `Iv23liRYQ460OIMG6JO8`
+- Legacy app page: <https://github.com/apps/reporyhq>
+- Allowed owner login (`OWNER_LOGIN`, an application allowlist — **not** app ownership): `sergii`
+- Desired app to register: **ProectioHQ**, owned by the `proectio` organization
+- Declared permissions for the desired app: metadata (read), secrets (read), environments (read)
+- Declared events: none
 
-## 1. Finish the GitHub App credentials
+## 1. Prerequisites
 
-Open GitHub:
+- Node.js installed
+- `gh` installed and authenticated (`gh auth login`)
 
-1. Avatar > **Settings**
-2. Left sidebar > **Developer settings**
-3. **GitHub Apps**
-4. Open **ProectioHQ**
-5. Stay on **General**
-
-### Client secret
-
-Under **Client secrets**:
-
-1. Select **Generate a new client secret**
-2. Copy the generated value
-3. Keep it temporarily in a password manager or another secure temporary location
-4. Do not put it in Git, GitHub Actions secrets, chat, notes, or source files
-
-### Private key
-
-Still on the ProectioHQ **General** page, scroll to **Private keys**:
-
-1. Select **Generate a private key**
-2. GitHub downloads a `.pem` file
-3. Keep the file only until the value is stored in Cloudflare
-4. No OpenSSL conversion is required; Proectio accepts the GitHub-generated RSA PEM directly
-5. Do not commit the file
-
-The full file, including the BEGIN/END lines, becomes the value of `GITHUB_PRIVATE_KEY`.
-
-### OAuth callback
-
-Do not use the Webhook URL field.
-
-Leave the final callback URL until the Cloudflare Worker has a real `workers.dev` URL. Proectio derives its OAuth callback from the request origin automatically.
+```bash
+npm install
+```
 
 ## 2. Create the Cloudflare Worker shell
 
@@ -83,42 +83,89 @@ Open the Cloudflare dashboard:
 4. Name the Worker exactly **proectio**
 5. Select **Deploy**
 
-The name must be exactly `proectio` because Cloudflare requires the dashboard Worker name to match the `name` in `wrangler.jsonc`.
+The name must be exactly `proectio` because Cloudflare requires the dashboard
+Worker name to match the `name` in `wrangler.jsonc`.
 
-At this point the Hello World code is temporary. Git integration will replace it with Proectio.
+At this point the Hello World code is temporary. Git integration will replace
+it with Proectio.
 
-## 3. Add runtime secrets to Cloudflare
+The Worker must exist before the bootstrap transfers secrets to it.
 
-Open:
+## 3. Bootstrap the GitHub App
 
-**Workers & Pages > proectio > Settings > Variables and Secrets**
+The desired app is the organization-owned `ProectioHQ` registered from
+`config/github-app-manifest.json`. It does not exist yet — the committed
+identifiers are stale legacy ReporyHQ state. The default command therefore
+reports that verification result and never creates anything:
 
-Select **Add** and create three entries with type **Secret**.
+```bash
+npm run bootstrap:github-app
+```
 
-### GITHUB_CLIENT_SECRET
+The script:
 
-- Variable name: `GITHUB_CLIENT_SECRET`
-- Type: **Secret**
-- Value: the GitHub App client secret generated above
+- verifies `gh` authentication
+- resolves the repository owner (the `proectio` organization)
+- checks GitHub for the desired org-owned app by its slug
+- reports the committed App ID / Client ID as stale legacy ReporyHQ identifiers
+- refuses to treat committed IDs as proof that the desired app exists
 
-### GITHUB_PRIVATE_KEY
+### Registering ProectioHQ
 
-- Variable name: `GITHUB_PRIVATE_KEY`
-- Type: **Secret**
-- Value: the complete contents of the downloaded GitHub `.pem` file
-- Include both the BEGIN and END lines
+```bash
+npm run bootstrap:github-app -- --create --org proectio --sync-cloudflare
+```
 
-### SESSION_SECRET
+The `url` field in the manifest must point at a sensible project URL; it
+already does.
 
-- Variable name: `SESSION_SECRET`
-- Type: **Secret**
-- Value: a new high-entropy random value
+Flow:
 
-Prefer generating this with a password manager such as 1Password or Apple Passwords. Use at least 32 random bytes / roughly 64 hexadecimal characters. Do not reuse another password or API token.
+1. The script validates prerequisites and reads the manifest
+2. It verifies no desired org-owned ProectioHQ app exists yet, and detects the
+   committed identifiers as stale legacy state (it prints what will be replaced
+   and asks you to type `replace`; `--force` skips that confirmation)
+3. It determines ownership as the `proectio` organization
+4. It starts a localhost callback server and opens
+   `http://127.0.0.1:4567/start` in the default browser
+5. The page POSTs the manifest to
+   `https://github.com/organizations/proectio/settings/apps/new`
+6. **Single manual boundary:** you click the GitHub confirmation to create the
+   app. GitHub then redirects to the localhost callback
+7. The script converts the temporary code with
+   `gh api POST /app-manifests/{code}/conversions`
+8. Non-secret identifiers for the NEW app atomically replace the stale values
+   in `wrangler.jsonc` and `config/github-app-state.json`
+9. Generated secrets
+   (`GITHUB_PRIVATE_KEY`, `GITHUB_CLIENT_SECRET`, `SESSION_SECRET`) go straight
+   into Cloudflare Worker Secrets; they are never printed
 
-After all three entries exist, select **Deploy** to apply the secret changes.
+If you want local development secrets instead of Cloudflare transfer, omit
+`--sync-cloudflare`; the script writes `.dev.vars` (mode `0600`, gitignored)
+for local development only.
 
-Cloudflare hides secret values after they are saved.
+### Duplicate protection
+
+- `--create` refuses only when a VERIFIED desired org-owned ProectioHQ app
+  already exists (resolved from GitHub by slug and matching the committed
+  client ID)
+- Committed App ID / Client ID that resolve to a different owner/app are stale
+  legacy state: they do not block registration and get replaced
+- The tool never silently creates `ProectioHQ-2` style duplicates
+
+`npm run bootstrap:github-app -- --help` documents all options.
+
+### Removing the legacy ReporyHQ app
+
+After ProectioHQ is registered, remove the legacy user-owned ReporyHQ app in a
+separate manual step (the bootstrap must not delete it):
+
+1. Open <https://github.com/settings/apps> (user-level Developer settings)
+2. Select **ReporyHQ** (App ID `5035680`, client ID `Iv23liRYQ460OIMG6JO8`)
+3. Confirm deletion
+
+Deleting an app also removes its installations; uninstall it from any
+repositories first if the inventory would be affected.
 
 ## 4. Connect Workers Builds to GitHub
 
@@ -171,9 +218,21 @@ Under **Identifying and authorizing users**:
 
 The callback belongs in the OAuth callback section, not in **Webhook URL**.
 
-Webhook can remain disabled for VS1.
+Webhook can remain disabled for VS1; Proectio receives no webhook events.
 
-## 6. Verify
+## 6. Install the app
+
+Install ProectioHQ on the account whose repositories should be inventoried:
+
+1. Open the ProectioHQ GitHub App installation page
+2. Select the account
+3. Install the app
+4. Prefer **All repositories** for a complete inventory
+5. Keep the app permissions read-only
+
+Proectio discovers installations automatically.
+
+## 7. Verify
 
 Open:
 
@@ -204,7 +263,16 @@ After login, verify:
 - opening **Secret names** loads repository secret names
 - environment secret names appear without values
 
-## 7. Add organizations later
+Run the bootstrap once more to confirm the happy path:
+
+```bash
+npm run bootstrap:github-app
+```
+
+It must resolve the verified org-owned ProectioHQ app, report it as existing,
+and create nothing.
+
+## Add organizations later
 
 The same ProectioHQ app can be installed on additional organizations.
 
@@ -218,7 +286,7 @@ For each organization:
 
 Proectio will discover the additional installation without a code change.
 
-## Credential lifecycle
+## Credential lifecycle and rotation
 
 Production source of truth:
 
@@ -227,4 +295,31 @@ Production source of truth:
 - Cloudflare Worker Secrets: runtime credential values
 - Password manager: optional break-glass backup
 
-After `GITHUB_PRIVATE_KEY` is safely stored in Cloudflare, either delete the downloaded PEM file or keep one protected recovery copy in a password manager. Never keep an unencrypted copy in the repository or Downloads folder long-term.
+Runtime secret names (declared in `wrangler.jsonc`):
+
+- `GITHUB_PRIVATE_KEY`
+- `GITHUB_CLIENT_SECRET`
+- `SESSION_SECRET`
+
+GitHub-generated RSA PEM private keys are accepted directly. No local OpenSSL
+conversion is required.
+
+First-time registration generates all three secrets automatically
+(`SESSION_SECRET` is generated with cryptographically secure randomness and is
+never derived from GitHub credentials).
+
+Credential rotation stays separate from first-time bootstrap. To rotate, use
+the GitHub App settings to generate a new client secret or private key, then
+push the new values to Cloudflare with the existing helper:
+
+```bash
+script/bootstrap_production.sh
+```
+
+or replace the values directly in Cloudflare:
+
+**Workers & Pages > proectio > Settings > Variables and Secrets**
+
+Never commit credential values. Keep at most one encrypted recovery copy of the
+private key in a password manager, and delete downloaded PEM files after the
+values are stored.

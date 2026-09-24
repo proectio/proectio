@@ -45,25 +45,33 @@ The normal production path is remote-first:
 
 ## GitHub App
 
-App: **ProectioHQ**
+Desired app: **ProectioHQ**, owned by the `proectio` organization.
 
-Public configuration committed in `wrangler.jsonc`:
+Source of truth: the committed GitHub App manifest
+[`config/github-app-manifest.json`](config/github-app-manifest.json).
 
-- App ID: `5035680`
-- Client ID: `Iv23liRYQ460OIMG6JO8`
-- Owner login: `sergii`
+Public configuration committed in `wrangler.jsonc` (currently stale legacy
+state — App ID `5035680` / Client ID `Iv23liRYQ460OIMG6JO8` belong to
+**ReporyHQ**, a user-owned app under `sergii`; they are replaced when
+ProectioHQ is registered):
 
-Required repository permissions:
+- Allowed owner login (`OWNER_LOGIN`, an application allowlist — **not** app ownership): `sergii`
 
-- Metadata: Read-only
-- Secrets: Read-only
-- Environments: Read-only
+Declared permissions (all read-only, each tied to an endpoint Proectio actually calls):
 
-Required organization permissions:
+| Permission   | Level | Required by                                                        |
+| ------------ | ----- | ------------------------------------------------------------------ |
+| metadata     | read  | installation inventory (`/installation/repositories`)               |
+| secrets      | read  | repository and environment secret-name listing (`/actions/secrets`) |
+| environments | read  | environment list for environment secret names (`/environments`)     |
 
-- Secrets: Read-only
+No organization permission is requested. Proectio never calls an organization
+API endpoint, so none is granted. No webhook events are requested because the
+implementation does not receive webhooks. `public` is `false`.
 
-Everything else remains No access for VS1.
+`script/bootstrap_github_app.mjs` verifies that the desired org-owned ProectioHQ
+app exists and never creates a duplicate; committed identifiers that resolve to
+a different app are treated as stale legacy state.
 
 ## Runtime secrets
 
@@ -77,9 +85,21 @@ GitHub-generated RSA PEM private keys are accepted directly. No local OpenSSL co
 
 ## Bootstrap
 
-Follow the detailed UI runbook:
+The GitHub App is bootstrapped reproducibly from the committed manifest
+[`config/github-app-manifest.json`](config/github-app-manifest.json):
 
-[docs/bootstrap.md](docs/bootstrap.md)
+```bash
+npm run bootstrap:github-app                 # verify the desired org-owned app; never creates a duplicate
+npm run bootstrap:github-app -- --create     # register ProectioHQ from the manifest, replacing stale legacy IDs
+```
+
+The default command resolves the desired org-owned ProectioHQ app (by slug, on
+GitHub) and verifies it without creating anything. `--create` registers the app
+through the GitHub App manifest flow, replaces the stale legacy ReporyHQ
+identifiers in config, and stores generated secrets without ever printing them.
+See `script/bootstrap_github_app.mjs --help` for options.
+
+The detailed production runbook remains at [docs/bootstrap.md](docs/bootstrap.md).
 
 ## Commands
 

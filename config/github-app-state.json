@@ -1,0 +1,14 @@
+{
+  "name": "ProectioHQ",
+  "slug": "proectiohq",
+  "appId": "5062093",
+  "clientId": "Iv23lignlZc2qFlBadPp",
+  "ownerLogin": "proectio",
+  "ownerType": "Organization",
+  "createdAt": "2026-09-24T15:20:15.985Z",
+  "replacedLegacy": {
+    "appId": "5035680",
+    "clientId": "Iv23liRYQ460OIMG6JO8",
+    "note": "previous committed identifiers were not the desired app; superseded here, legacy app left intact for manual removal"
+  }
+}

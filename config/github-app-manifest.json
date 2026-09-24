@@ -1,0 +1,16 @@
+{
+  "name": "ProectioHQ",
+  "url": "https://github.com/proectio/proectio",
+  "description": "Read-only GitHub repository inventory and configuration dashboard for Proectio.",
+  "redirect_url": "http://127.0.0.1:4567/github-app-manifest/callback",
+  "callback_urls": [],
+  "public": false,
+  "request_oauth_on_install": false,
+  "setup_on_update": false,
+  "default_permissions": {
+    "metadata": "read",
+    "secrets": "read",
+    "environments": "read"
+  },
+  "default_events": []
+}
