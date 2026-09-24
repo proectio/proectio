@@ -118,7 +118,7 @@ let source = fs.readFileSync(path, "utf8");
 
 function setVar(name, value) {
   const escaped = value.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
-  const pattern = new RegExp(`("\\b${name}\\"\\s*:\\s*)\"[^\"]*"`);
+  const pattern = new RegExp(`("${name}"\\s*:\\s*)\"[^\"]*"`);
   if (pattern.test(source)) {
     source = source.replace(pattern, `$1"${escaped}"`);
     return;
