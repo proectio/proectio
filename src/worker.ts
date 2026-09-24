@@ -1,5 +1,7 @@
 import { cookie, createSession, readCookie, verifySession } from "./auth";
 import { loadInventory, loadRepositoryDetails } from "./github";
+import { listWorkerSecretNames } from "./cloudflare";
+import { compareSecretNames } from "./secret-inventory";
 
 interface Env {
   ASSETS: Fetcher;
@@ -9,6 +11,10 @@ interface Env {
   GITHUB_CLIENT_SECRET: string;
   SESSION_SECRET: string;
   OWNER_LOGIN: string;
+  CLOUDFLARE_ACCOUNT_ID?: string;
+  CLOUDFLARE_API_TOKEN?: string;
+  CLOUDFLARE_WORKER_NAME?: string;
+  CLOUDFLARE_REPOSITORY?: string;
 }
 
 interface GitHubOAuthTokenResponse {
@@ -144,6 +150,65 @@ export default {
         return json({ installations: await loadInventory(env.GITHUB_APP_ID, env.GITHUB_PRIVATE_KEY) });
       } catch (error) {
         const message = error instanceof Error ? error.message : "Unknown inventory error";
+        return json({ error: message }, 502);
+      }
+    }
+
+    if (url.pathname === "/api/secret-inventory") {
+      if (!(await isAuthenticated(request, env))) return json({ error: "Unauthorized" }, 401);
+
+      const installationId = Number(url.searchParams.get("installationId"));
+      const fullName = url.searchParams.get("repo") ?? "";
+      if (!Number.isInteger(installationId) || installationId <= 0 || !/^[^/]+\/[^/]+$/.test(fullName)) {
+        return json({ error: "Invalid secret inventory request" }, 400);
+      }
+
+      try {
+        const githubDetails = await loadRepositoryDetails(
+          env.GITHUB_APP_ID,
+          env.GITHUB_PRIVATE_KEY,
+          installationId,
+          fullName,
+        );
+        const githubNames = [
+          ...githubDetails.secrets.map((secret) => secret.name),
+          ...githubDetails.environments.flatMap((environment) => environment.secrets.map((secret) => secret.name)),
+        ];
+
+        const cloudflareConfigured = Boolean(
+          env.CLOUDFLARE_ACCOUNT_ID &&
+          env.CLOUDFLARE_API_TOKEN &&
+          env.CLOUDFLARE_WORKER_NAME &&
+          env.CLOUDFLARE_REPOSITORY === fullName,
+        );
+
+        if (!cloudflareConfigured) {
+          return json({
+            githubNames: [...new Set(githubNames)].sort(),
+            cloudflareNames: [],
+            comparison: [],
+            cloudflare: { configured: false },
+          });
+        }
+
+        const cloudflareSecrets = await listWorkerSecretNames(
+          env.CLOUDFLARE_ACCOUNT_ID!,
+          env.CLOUDFLARE_API_TOKEN!,
+          env.CLOUDFLARE_WORKER_NAME!,
+        );
+        const cloudflareNames = cloudflareSecrets.map((secret) => secret.name);
+
+        return json({
+          githubNames: [...new Set(githubNames)].sort(),
+          cloudflareNames: [...new Set(cloudflareNames)].sort(),
+          comparison: compareSecretNames(githubNames, cloudflareNames),
+          cloudflare: {
+            configured: true,
+            worker: env.CLOUDFLARE_WORKER_NAME,
+          },
+        });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Unknown secret inventory error";
         return json({ error: message }, 502);
       }
     }

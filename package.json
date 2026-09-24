@@ -11,7 +11,8 @@
     "test": "vitest run",
     "check": "npm run typecheck && npm test && vite build",
     "deploy": "npm run build && wrangler deploy",
-    "bootstrap:github-app": "node script/bootstrap_github_app.mjs"
+    "bootstrap:github-app": "node script/bootstrap_github_app.mjs",
+    "configure:cloudflare-inventory": "bash script/configure_cloudflare_inventory.sh"
   },
   "dependencies": {
     "@vitejs/plugin-react": "latest",

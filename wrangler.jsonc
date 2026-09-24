@@ -11,7 +11,9 @@
   "vars": {
     "GITHUB_APP_ID": "5062093",
     "GITHUB_CLIENT_ID": "Iv23lignlZc2qFlBadPp",
-    "OWNER_LOGIN": "sergii"
+    "OWNER_LOGIN": "sergii",
+    "CLOUDFLARE_WORKER_NAME": "proectio",
+    "CLOUDFLARE_REPOSITORY": "proectio/proectio"
   },
   "secrets": {
     "required": [
