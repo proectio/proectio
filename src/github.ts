@@ -173,7 +173,7 @@ async function githubJson<T>(url: string, token: string, init: RequestInit = {})
   headers.set("Accept", "application/vnd.github+json");
   headers.set("Authorization", `Bearer ${token}`);
   headers.set("X-GitHub-Api-Version", apiVersion);
-  headers.set("User-Agent", "Repory");
+  headers.set("User-Agent", "Proectio");
 
   const response = await fetch(url, { ...init, headers });
   if (!response.ok) {
