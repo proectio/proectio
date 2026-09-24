@@ -103,6 +103,13 @@ export default function App() {
     }
   }
 
+  useEffect(() => {
+    for (const { installation, repository } of repositories) {
+      void loadDetails(installation.installationId, repository.full_name);
+      void loadSecretInventory(installation.installationId, repository.full_name);
+    }
+  }, [repositories]);
+
   if (authenticated === null) return <main className="shell"><p>Loading Proectio…</p></main>;
 
   if (!authenticated) {
@@ -163,46 +170,87 @@ export default function App() {
                     <td>
                       <strong>{repository.name}</strong>
                       {repository.archived && <span className="tag">Archived</span>}
-                      <details onToggle={(event) => {
-                        if (event.currentTarget.open) void loadDetails(installation.installationId, repository.full_name);
-                      }}>
-                        <summary>{detailLoading[repository.full_name] ? "Loading secret names…" : "Secret names"}</summary>
-                        {repositoryDetails && (
-                          <div className="secret-list">
-                            {repositoryDetails.secrets.map((secret) => <code key={secret.name}>{secret.name}</code>)}
-                            {repositoryDetails.environments.flatMap((environment) =>
-                              environment.secrets.map((secret) => <code key={`${environment.name}:${secret.name}`}>{environment.name}: {secret.name}</code>),
+                      <div className="secret-panels">
+                        <section className="secret-panel">
+                          <div className="secret-panel-header">
+                            <span>GitHub secrets</span>
+                            {inventoryLoading[repository.full_name] && !secretInventory[repository.full_name] ? (
+                              <span className="inline-loading" aria-label="Loading GitHub secrets">
+                                <span className="spinner" aria-hidden="true" />
+                                Loading
+                              </span>
+                            ) : (
+                              <span className="count-badge">{secretInventory[repository.full_name]?.githubNames.length ?? 0}</span>
                             )}
-                            {count === 0 && <span>None</span>}
                           </div>
-                        )}
-                      </details>
-                      <details onToggle={(event) => {
-                        if (event.currentTarget.open) void loadSecretInventory(installation.installationId, repository.full_name);
-                      }}>
-                        <summary>{inventoryLoading[repository.full_name] ? "Comparing providers…" : "GitHub ↔ Cloudflare"}</summary>
-                        {secretInventory[repository.full_name] && (
-                          <div className="secret-comparison">
-                            {!secretInventory[repository.full_name].cloudflare.configured && (
-                              <span>Cloudflare inventory is not configured for this repository.</span>
+                          {inventoryLoading[repository.full_name] && !secretInventory[repository.full_name] && (
+                            <div className="secret-skeleton" aria-hidden="true">
+                              <span />
+                              <span />
+                              <span />
+                            </div>
+                          )}
+                          {secretInventory[repository.full_name] && (
+                            <div className="secret-list">
+                              {secretInventory[repository.full_name].githubNames.map((name) => <code key={name}>{name}</code>)}
+                              {secretInventory[repository.full_name].githubNames.length === 0 && <span className="empty-state">No secrets.</span>}
+                            </div>
+                          )}
+                        </section>
+
+                        <section className="secret-panel">
+                          <div className="secret-panel-header">
+                            <span>Cloudflare secrets</span>
+                            {inventoryLoading[repository.full_name] && !secretInventory[repository.full_name] ? (
+                              <span className="inline-loading" aria-label="Loading Cloudflare secrets">
+                                <span className="spinner" aria-hidden="true" />
+                                Loading
+                              </span>
+                            ) : (
+                              <span className="count-badge">{secretInventory[repository.full_name]?.cloudflareNames.length ?? 0}</span>
                             )}
-                            {secretInventory[repository.full_name].comparison.map((item) => (
-                              <code key={item.name} data-presence={item.presence} data-verdict={item.verdict}>
-                                {item.name} · {item.verdict}
-                                {item.expected.length > 0 ? ` · expected: ${item.expected.join("+")}` : ""}
-                              </code>
-                            ))}
-                            {secretInventory[repository.full_name].cloudflare.configured &&
-                              secretInventory[repository.full_name].comparison.length === 0 && <span>No secret names found.</span>}
                           </div>
-                        )}
-                      </details>
+                          {inventoryLoading[repository.full_name] && !secretInventory[repository.full_name] && (
+                            <div className="secret-skeleton" aria-hidden="true">
+                              <span />
+                              <span />
+                              <span />
+                            </div>
+                          )}
+                          {secretInventory[repository.full_name] && !secretInventory[repository.full_name].cloudflare.configured && (
+                            <span className="empty-state">Cloudflare inventory is not configured.</span>
+                          )}
+                          {secretInventory[repository.full_name]?.cloudflare.configured && (
+                            <div className="secret-list">
+                              {secretInventory[repository.full_name].cloudflareNames.map((name) => <code key={name}>{name}</code>)}
+                              {secretInventory[repository.full_name].cloudflareNames.length === 0 && <span className="empty-state">No secrets.</span>}
+                            </div>
+                          )}
+                        </section>
+                      </div>
+
+                      {secretInventory[repository.full_name] && secretInventory[repository.full_name].comparison.length > 0 && (
+                        <div className="secret-comparison">
+                          <span className="comparison-label">Placement</span>
+                          {secretInventory[repository.full_name].comparison.map((item) => (
+                            <code key={item.name} data-presence={item.presence} data-verdict={item.verdict}>
+                              {item.name} · {item.verdict}
+                              {item.expected.length > 0 ? ` · expected: ${item.expected.join("+")}` : ""}
+                            </code>
+                          ))}
+                        </div>
+                      )}
                     </td>
                     <td>{installation.account.login}</td>
                     <td>{repository.visibility}</td>
                     <td>{formatDate(repository.pushed_at)}</td>
-                    <td>{count ?? "Load"}</td>
-                    <td>{repositoryDetails?.environments.length ?? "Load"}</td>
+                    <td>
+                      {count ?? (detailLoading[repository.full_name] ? <span className="spinner" aria-label="Loading secret count" /> : "—")}
+                    </td>
+                    <td>
+                      {repositoryDetails?.environments.length ??
+                        (detailLoading[repository.full_name] ? <span className="spinner" aria-label="Loading environment count" /> : "—")}
+                    </td>
                   </tr>
                 );
               })}
