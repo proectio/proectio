@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Proectio GitHub App bootstrap.
 //
-// The desired app is the organization-owned ProectioHQ registered from
+// The desired app is the organization-owned Proectio Repo Observer registered from
 // config/github-app-manifest.json. Default mode verifies that specific app and
 // refuses to create a duplicate only when a verified matching app exists.
 //
@@ -210,7 +210,7 @@ function printHelp() {
   process.stdout.write(`Proectio GitHub App bootstrap
 
 Usage:
-  node script/bootstrap_github_app.mjs             verify the DESIRED org-owned ProectioHQ app (default, never creates)
+  node script/bootstrap_github_app.mjs             verify the DESIRED org-owned Proectio Repo Observer app (default, never creates)
   node script/bootstrap_github_app.mjs --create    register the desired app from config/github-app-manifest.json
 
 Options:
