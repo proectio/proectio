@@ -52,6 +52,54 @@ type CloudflareRuntime = {
 type CloudflareRuntimeResponse = { runtime: CloudflareRuntime } | { error: string };
 type Filter = "all" | "public" | "private" | "archived";
 
+
+type UiIconName =
+  | "key"
+  | "workflow"
+  | "shield"
+  | "cloud"
+  | "rocket"
+  | "plug"
+  | "placement"
+  | "refresh";
+
+function UiIcon({ name, size = 14 }: { name: UiIconName; size?: number }) {
+  const common = {
+    width: size,
+    height: size,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: 1.8,
+    strokeLinecap: "round" as const,
+    strokeLinejoin: "round" as const,
+    "aria-hidden": true,
+  };
+
+  if (name === "key") {
+    return <svg {...common}><circle cx="7.5" cy="15.5" r="3.5" /><path d="m10 13 8-8 2 2-2 2 1.5 1.5-2 2L16 11l-4 4" /></svg>;
+  }
+  if (name === "workflow") {
+    return <svg {...common}><rect x="3" y="4" width="6" height="6" rx="1.5" /><rect x="15" y="14" width="6" height="6" rx="1.5" /><path d="M9 7h3a3 3 0 0 1 3 3v4" /><path d="m12 12 3 3 3-3" /></svg>;
+  }
+  if (name === "shield") {
+    return <svg {...common}><path d="M12 3 5 6v5c0 4.6 2.9 8.1 7 10 4.1-1.9 7-5.4 7-10V6l-7-3Z" /><path d="m9 12 2 2 4-4" /></svg>;
+  }
+  if (name === "cloud") {
+    return <svg {...common}><path d="M17.5 19H7a4 4 0 0 1-.8-7.9A6 6 0 0 1 17.7 9a5 5 0 0 1-.2 10Z" /></svg>;
+  }
+  if (name === "rocket") {
+    return <svg {...common}><path d="M14 5c2.5-2.5 5-2 5-2s.5 2.5-2 5l-5 5-4-4 6-4Z" /><path d="m9 10-4 1-2 3 5 1" /><path d="m14 15-1 4-3 2-1-5" /><circle cx="15.5" cy="6.5" r="1.2" /></svg>;
+  }
+  if (name === "plug") {
+    return <svg {...common}><path d="M8 3v6M16 3v6" /><path d="M6 9h12v2a6 6 0 0 1-6 6v4" /><path d="M9 21h6" /></svg>;
+  }
+  if (name === "placement") {
+    return <svg {...common}><path d="M4 6h7" /><path d="m8 3 3 3-3 3" /><path d="M20 18h-7" /><path d="m16 15-3 3 3 3" /><path d="M11 6c5 0 5 12 9 12" /><path d="M13 18c-5 0-5-12-9-12" /></svg>;
+  }
+  return <svg {...common}><path d="M20 6v5h-5" /><path d="M19 11a7 7 0 1 0 1 5" /></svg>;
+}
+
 function secretCount(details: RepositoryDetails | undefined): number | null {
   if (!details) return null;
   return details.secrets.length + details.environments.reduce((sum, environment) => sum + environment.secrets.length, 0);
@@ -429,7 +477,7 @@ export default function App() {
                       <td colSpan={6}>
                         <div className="repository-details-header">
                           <div>
-                            <span className="details-title">Secrets</span>
+                            <span className="details-title section-title"><UiIcon name="key" />Secrets</span>
                             <span className="details-subtitle">Names only. Values are never revealed.</span>
                           </div>
                           <button
@@ -439,7 +487,7 @@ export default function App() {
                             aria-label={`Refresh ${fullName}`}
                             title="Refresh secrets inventory"
                           >
-                            {refreshing ? <span className="spinner" aria-hidden="true" /> : "↻"}
+                            {refreshing ? <span className="spinner" aria-hidden="true" /> : <UiIcon name="refresh" size={16} />}
                           </button>
                         </div>
 
@@ -497,7 +545,7 @@ export default function App() {
                         <section className="governance-panel">
                           <div className="governance-header">
                             <div>
-                              <strong>Repository governance</strong>
+                              <strong className="section-title"><UiIcon name="shield" />Repository governance</strong>
                               <span>GitHub Actions and default-branch protection</span>
                             </div>
                             {governanceLoading[fullName] && !repositoryGovernance && (
@@ -509,7 +557,7 @@ export default function App() {
                             <div className="governance-grid">
                               <section className="governance-card">
                                 <div className="governance-card-header">
-                                  <strong>GitHub Actions</strong>
+                                  <strong className="card-title"><UiIcon name="workflow" />GitHub Actions</strong>
                                   {repositoryGovernance.actions.available && (
                                     <span className="count-badge">{repositoryGovernance.actions.workflows.length}</span>
                                   )}
@@ -533,7 +581,7 @@ export default function App() {
 
                               <section className="governance-card">
                                 <div className="governance-card-header">
-                                  <strong>Branch protection</strong>
+                                  <strong className="card-title"><UiIcon name="shield" />Branch protection</strong>
                                   <div className="governance-card-meta">
                                     {repositoryGovernance.evaluation.configured && (
                                       <span className={governanceIssues === 0 ? "count-badge policy-ok" : "count-badge policy-issue"}>
@@ -601,7 +649,7 @@ export default function App() {
                         <section className="runtime-panel">
                           <div className="runtime-header">
                             <div>
-                              <strong>Cloudflare runtime</strong>
+                              <strong className="section-title"><UiIcon name="cloud" />Cloudflare runtime</strong>
                               <span>Deployments and Worker bindings</span>
                             </div>
                             {cloudflareRuntimeLoading[fullName] && !runtime && (
@@ -617,7 +665,7 @@ export default function App() {
                             <div className="runtime-grid">
                               <section className="runtime-card">
                                 <div className="runtime-card-header">
-                                  <strong>Deployments</strong>
+                                  <strong className="card-title"><UiIcon name="rocket" />Deployments</strong>
                                   <span className="count-badge">{runtime.deployments?.length ?? 0}</span>
                                 </div>
                                 {(runtime.deployments?.length ?? 0) === 0 ? (
@@ -639,7 +687,7 @@ export default function App() {
 
                               <section className="runtime-card">
                                 <div className="runtime-card-header">
-                                  <strong>Bindings</strong>
+                                  <strong className="card-title"><UiIcon name="plug" />Bindings</strong>
                                   <span className="count-badge">{runtime.bindings?.length ?? 0}</span>
                                 </div>
                                 {(runtime.bindings?.length ?? 0) === 0 ? (
@@ -662,7 +710,7 @@ export default function App() {
                         {inventory && (
                           <section className="placement-panel">
                             <div className="placement-header">
-                              <strong>Placement</strong>
+                              <strong className="section-title"><UiIcon name="placement" />Placement</strong>
                               <span>{placementIssues === 0 ? "All observed secrets match policy." : `${placementIssues} placement issue${placementIssues === 1 ? "" : "s"}.`}</span>
                             </div>
                             {inventory.comparison.length === 0 ? (
