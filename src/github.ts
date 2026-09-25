@@ -23,6 +23,10 @@ export interface GitHubEnvironment {
 export interface RepositoryDetails {
   secrets: GitHubSecret[];
   environments: GitHubEnvironment[];
+  access: {
+    repositorySecrets: { available: boolean; error?: string };
+    environments: { available: boolean; error?: string };
+  };
 }
 
 export interface GitHubWorkflow {
@@ -65,6 +69,7 @@ export interface InstallationInventory {
   githubAppInstallUrl?: string;
   installationUrl: string;
   repositorySelection: "all" | "selected";
+  permissions: Record<string, string>;
   repositories: GitHubRepository[];
 }
 
@@ -75,6 +80,7 @@ interface GitHubInstallation {
     type: string;
   };
   repository_selection: "all" | "selected";
+  permissions: Record<string, string>;
 }
 
 interface GitHubAppMetadata {
@@ -377,6 +383,7 @@ export async function loadInventory(appId: string, privateKey: string): Promise<
       githubAppInstallUrl,
       installationUrl,
       repositorySelection: installation.repository_selection,
+      permissions: installation.permissions ?? {},
       repositories: await listRepositories(token),
     });
   }
@@ -392,12 +399,31 @@ export async function loadRepositoryDetails(
 ): Promise<RepositoryDetails> {
   const appJwt = await createAppJwt(appId, privateKey);
   const token = await createInstallationToken(appJwt, installationId);
-  const [secrets, environments] = await Promise.all([
+  const [secretsResult, environmentsResult] = await Promise.allSettled([
     listRepositorySecrets(token, fullName),
     listEnvironmentSecrets(token, fullName),
   ]);
 
-  return { secrets, environments };
+  return {
+    secrets: secretsResult.status === "fulfilled" ? secretsResult.value : [],
+    environments: environmentsResult.status === "fulfilled" ? environmentsResult.value : [],
+    access: {
+      repositorySecrets:
+        secretsResult.status === "fulfilled"
+          ? { available: true }
+          : {
+              available: false,
+              error: secretsResult.reason instanceof Error ? secretsResult.reason.message : "Repository secrets unavailable",
+            },
+      environments:
+        environmentsResult.status === "fulfilled"
+          ? { available: true }
+          : {
+              available: false,
+              error: environmentsResult.reason instanceof Error ? environmentsResult.reason.message : "Environments unavailable",
+            },
+    },
+  };
 }
 
 
