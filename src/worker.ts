@@ -219,6 +219,7 @@ export default {
           cloudflare: {
             configured: true,
             worker: env.CLOUDFLARE_WORKER_NAME,
+            dashboardUrl: `https://dash.cloudflare.com/${env.CLOUDFLARE_ACCOUNT_ID}/workers/services/view/${encodeURIComponent(env.CLOUDFLARE_WORKER_NAME!)}/production`,
           },
         });
       } catch (error) {
