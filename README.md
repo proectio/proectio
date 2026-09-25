@@ -287,3 +287,21 @@ Because Proectio is intended to inventory repositories across accounts, the GitH
 4. confirm the installation
 
 The existing app does not need to be recreated merely to change this setting.
+
+
+## PWA installation
+
+Proectio ships as an installable Progressive Web App:
+
+- SVG favicon plus 32px, 180px, 192px, and 512px PNG app icons
+- web app manifest with standalone display mode
+- theme/background metadata for desktop and mobile installation
+- Apple touch icon metadata
+- production-only service worker registration
+
+The service worker intentionally caches only PWA metadata and icon assets. It never caches
+`/api/*` or `/auth/*` responses and does not persist repository inventory or other authenticated
+dashboard data for offline use.
+
+On supported browsers, use the browser's **Install app** action after production is served over HTTPS.
+On iOS/iPadOS, use Safari's **Add to Home Screen** flow.
