@@ -47,9 +47,13 @@ The normal production path is remote-first:
 
 Proectio can compare secret names between a GitHub repository and its mapped Cloudflare Worker without reading secret values.
 
-For `proectio/proectio`, the current mapping is:
+Repository-to-infrastructure mappings live in the committed resource registry
+`config/repository-resources.json`.
+
+The first mapping is:
 
 - GitHub repository: `proectio/proectio`
+- Cloudflare account: `3094c995ea8e0405b8aa7fd1259eaea8`
 - Cloudflare Worker: `proectio`
 
 The comparison classifies each name as:
@@ -62,8 +66,8 @@ Cloudflare access is optional. If it is not configured, GitHub inventory continu
 
 Required Cloudflare runtime configuration:
 
-- `CLOUDFLARE_ACCOUNT_ID` — non-secret account identifier
-- `CLOUDFLARE_API_TOKEN` — secret token with read access sufficient to list Worker secret names
+- `config/repository-resources.json` — non-secret per-repository resource mappings
+- `CLOUDFLARE_API_TOKEN` — Proectio Worker secret with read access to mapped Cloudflare resources
 
 The Cloudflare API call is read-only and returns secret names/types, not values.
 
@@ -74,15 +78,18 @@ npm run configure:cloudflare-inventory
 ```
 
 The bootstrap verifies Wrangler authentication, auto-detects the account ID when possible,
-preserves an existing `CLOUDFLARE_API_TOKEN` Worker secret, securely prompts only when the
-secret is absent, writes non-secret mapping values to `wrangler.jsonc`, runs `npm run check`,
-and deploys only when explicitly invoked with:
+preserves an existing `CLOUDFLARE_API_TOKEN` on the Proectio Worker, securely prompts only when
+the secret is absent, upserts the non-secret repository mapping in
+`config/repository-resources.json`, validates the registry, runs `npm run check`, and deploys
+only when explicitly invoked with:
 
 ```bash
 npm run configure:cloudflare-inventory -- --deploy
 ```
 
-For automation, `--account-id`, `--worker`, and `--repository` are supported.
+For automation, `--account-id`, `--worker`, `--repository`, `--app-url`, and
+`--proectio-worker` are supported. The target Worker and the Proectio Worker are intentionally
+separate concepts: the API token is stored on Proectio, not copied into every inspected Worker.
 
 ## VS3: expected-state secret placement policy
 
@@ -215,3 +222,33 @@ The initial policy for `proectio/proectio` expects the default branch to:
 
 The dashboard reports deterministic governance findings whenever observed GitHub settings drift
 from that policy. Policy evaluation is read-only: Proectio does not modify repository settings.
+
+
+## VS5: repository resource registry
+
+Proectio is no longer coupled to one Cloudflare Worker through singleton Wrangler variables.
+
+`config/repository-resources.json` is the source of truth for repository-to-resource mappings.
+Each repository may define an optional Cloudflare integration with:
+
+- `accountId`
+- `worker`
+- optional `appUrl`
+- `$request-origin` as the explicit app URL sentinel for Proectio itself
+
+Repositories without a Cloudflare mapping remain valid GitHub-only repositories. Secret inventory
+and Cloudflare runtime inspection resolve resources from the registry per repository.
+
+The registry is validated on every `npm run check`. Validation rejects malformed repository
+names, missing Cloudflare fields, duplicate repository entries, duplicate account/Worker mappings,
+and invalid app URLs.
+
+Add or update a mapping with:
+
+```bash
+npm run configure:cloudflare-inventory -- \
+  --repository owner/repository \
+  --worker worker-name \
+  --account-id account-id \
+  --app-url https://example.com
+```
