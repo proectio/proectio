@@ -146,6 +146,9 @@ function loadManifest() {
       fail(`manifest field "${key}" is missing or still contains a placeholder`);
     }
   }
+  if (manifest.public !== true) {
+    fail('manifest field "public" must be true so Proectio Repo Observer can be installed on other accounts');
+  }
   if (!manifest.default_permissions || typeof manifest.default_permissions !== "object") {
     fail('manifest field "default_permissions" must be an object');
   }
@@ -257,6 +260,7 @@ async function verifyDesiredApp(manifest, owner, committed) {
     console.log("");
     log("verify", `owner: ${app.owner.login} (${app.owner.type})`);
     log("verify", `app page: ${app.html_url || `https://github.com/apps/${slug}`}`);
+    log("verify", `installability: ${manifest.public ? "any account" : "owner account only"}`);
     log("verify", `declared permissions: ${formatPermissions(manifest.default_permissions)}`);
     log("verify", `declared events: ${(manifest.default_events || []).join(", ") || "none"}`);
     console.log("");
@@ -284,8 +288,9 @@ async function verifyDesiredApp(manifest, owner, committed) {
   console.log(`  npm run bootstrap:github-app -- --create${owner.kind === "organization" ? ` --org ${owner.login}` : ""} --sync-cloudflare`);
   console.log("");
   console.log("Manual obligations after registration:");
-  console.log("  1. Install the app on the target account(s) so the Worker has an installation.");
-  console.log("  2. After the Worker has a public workers.dev URL, add the production OAuth");
+  console.log("  1. The manifest declares public=true, so the app is installable on accounts other than its owner.");
+  console.log("  2. Install the app on each target account and choose All repositories or Selected repositories.");
+  console.log("  3. After the Worker has a public workers.dev URL, add the production OAuth");
   console.log("     callback URL /auth/github/callback in the app settings.");
   console.log("");
 }
@@ -303,6 +308,7 @@ function startPageHtml({ manifestJson, registrationUrl, state, ownerLabel, appNa
     "<h1>Register Proectio GitHub App</h1>",
     `<p>This registers a <strong>new</strong> GitHub App named <strong>${escapeHtml(appName)}</strong>`,
     `on ${escapeHtml(ownerLabel)} using the committed manifest <code>config/github-app-manifest.json</code>.</p>`,
+    "<p>The manifest makes the app installable on any account. This does not publish it to GitHub Marketplace.</p>",
     "<p>You will confirm the app once on GitHub. After that you return here automatically</p>",
     '<form action="' + action + '" method="POST">',
     '<input type="hidden" name="manifest" value="' + escapeHtml(manifestJson) + '">',
