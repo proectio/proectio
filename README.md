@@ -198,3 +198,20 @@ Proectio also inspects two read-only GitHub governance surfaces:
 
 These checks require the GitHub App permissions `actions: read` and `administration: read`.
 If an existing Proectio installation has not yet accepted the new permissions, the dashboard keeps the rest of the repository inventory available and shows the governance card as permission unavailable instead of failing the whole repository inspection.
+
+
+## VS4: repository governance policy
+
+Proectio compares observed default-branch protection with a committed expected-state policy in
+`config/governance-policy.json`.
+
+The initial policy for `proectio/proectio` expects the default branch to:
+
+- be protected
+- require pull request reviews
+- require at least one approving review
+- require the `check` status check
+- apply branch protection to administrators
+
+The dashboard reports deterministic governance findings whenever observed GitHub settings drift
+from that policy. Policy evaluation is read-only: Proectio does not modify repository settings.
