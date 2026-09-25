@@ -61,7 +61,10 @@ type UiIconName =
   | "rocket"
   | "plug"
   | "placement"
-  | "refresh";
+  | "refresh"
+  | "text"
+  | "lock"
+  | "package";
 
 function UiIcon({ name, size = 14 }: { name: UiIconName; size?: number }) {
   const common = {
@@ -97,7 +100,42 @@ function UiIcon({ name, size = 14 }: { name: UiIconName; size?: number }) {
   if (name === "placement") {
     return <svg {...common}><path d="M4 6h7" /><path d="m8 3 3 3-3 3" /><path d="M20 18h-7" /><path d="m16 15-3 3 3 3" /><path d="M11 6c5 0 5 12 9 12" /><path d="M13 18c-5 0-5-12-9-12" /></svg>;
   }
+  if (name === "text") {
+    return <svg {...common}><path d="M6 4h12" /><path d="M6 9h12" /><path d="M6 14h8" /><path d="M6 19h10" /></svg>;
+  }
+  if (name === "lock") {
+    return <svg {...common}><rect x="5" y="11" width="14" height="10" rx="2" /><path d="M8 11V8a4 4 0 1 1 8 0v3" /></svg>;
+  }
+  if (name === "package") {
+    return <svg {...common}><path d="M12 3 4.5 7 12 11l7.5-4L12 3Z" /><path d="M4.5 7v10L12 21l7.5-4V7" /><path d="M12 11v10" /></svg>;
+  }
   return <svg {...common}><path d="M20 6v5h-5" /><path d="M19 11a7 7 0 1 0 1 5" /></svg>;
+}
+
+function bindingTypeLabel(type: string): string {
+  switch (type) {
+    case "assets":
+      return "Assets";
+    case "plain_text":
+      return "Plain text";
+    case "secret_text":
+      return "Secret text";
+    default:
+      return type;
+  }
+}
+
+function bindingTypeIcon(type: string): UiIconName {
+  switch (type) {
+    case "assets":
+      return "package";
+    case "plain_text":
+      return "text";
+    case "secret_text":
+      return "lock";
+    default:
+      return "plug";
+  }
 }
 
 function secretCount(details: RepositoryDetails | undefined): number | null {
@@ -697,7 +735,16 @@ export default function App() {
                                     {(runtime.bindings ?? []).map((binding) => (
                                       <div className="binding-item" key={binding.name}>
                                         <code>{binding.name}</code>
-                                        <span>{binding.type}</span>
+                                        <span
+                                          className="binding-type-icon"
+                                          tabIndex={0}
+                                          aria-label={bindingTypeLabel(binding.type)}
+                                        >
+                                          <UiIcon name={bindingTypeIcon(binding.type)} size={14} />
+                                          <span className="binding-type-tooltip" role="tooltip">
+                                            {bindingTypeLabel(binding.type)}
+                                          </span>
+                                        </span>
                                       </div>
                                     ))}
                                   </div>
