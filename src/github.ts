@@ -62,6 +62,7 @@ export interface InstallationInventory {
     type: string;
   };
   githubAppUrl?: string;
+  installationUrl: string;
   repositories: GitHubRepository[];
 }
 
@@ -360,10 +361,16 @@ export async function loadInventory(appId: string, privateKey: string): Promise<
 
   for (const installation of installations) {
     const token = await createInstallationToken(appJwt, installation.id);
+    const installationUrl =
+      installation.account.type === "Organization"
+        ? `https://github.com/organizations/${installation.account.login}/settings/installations/${installation.id}`
+        : `https://github.com/settings/installations/${installation.id}`;
+
     inventory.push({
       installationId: installation.id,
       account: installation.account,
       githubAppUrl,
+      installationUrl,
       repositories: await listRepositories(token),
     });
   }
