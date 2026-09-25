@@ -9,11 +9,12 @@
     "build": "npm run typecheck && vite build",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "check": "npm run validate:resources && npm run typecheck && npm test && vite build",
+    "check": "npm run validate:resources && npm run check:bootstrap && npm run typecheck && npm test && vite build",
     "deploy": "npm run build && wrangler deploy",
     "bootstrap:github-app": "node script/bootstrap_github_app.mjs",
     "configure:cloudflare-inventory": "bash script/configure_cloudflare_inventory.sh",
-    "validate:resources": "node script/validate_repository_resources.mjs"
+    "validate:resources": "node script/validate_repository_resources.mjs",
+    "check:bootstrap": "node --check script/bootstrap_github_app.mjs"
   },
   "dependencies": {
     "@vitejs/plugin-react": "latest",
