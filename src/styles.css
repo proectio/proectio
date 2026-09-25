@@ -100,6 +100,9 @@ tbody .repository-details-row:last-child td { border-bottom: 0; }
 .governance-card { min-height: 110px; border: 1px solid #e4e4df; border-radius: 10px; background: #fff; padding: 12px; }
 .governance-card-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
 .governance-card-header strong { font-size: 13px; color: #333; }
+.governance-card-meta { display: inline-flex; align-items: center; gap: 6px; }
+.policy-ok { background: #f3f7f3; color: #566356; }
+.policy-issue { background: #f7f3ea; color: #725f35; }
 .branch-name { padding: 2px 7px; border-radius: 999px; background: #f1f1ed; color: #666; font: 11px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
 .workflow-list, .protection-list { display: flex; flex-direction: column; gap: 6px; }
 .workflow-item { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 10px; align-items: baseline; font-size: 12px; }
@@ -107,6 +110,15 @@ tbody .repository-details-row:last-child td { border-bottom: 0; }
 .workflow-item > span:nth-child(2) { grid-column: 1; color: #999; font: 11px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; overflow-wrap: anywhere; }
 .workflow-state { grid-column: 2; grid-row: 1 / span 2; color: #777; font-size: 11px; }
 .protection-list { color: #666; font-size: 12px; }
+.governance-findings { display: flex; flex-direction: column; gap: 7px; }
+.governance-finding { display: grid; grid-template-columns: 18px 1fr; gap: 6px; align-items: start; font-size: 12px; }
+.finding-mark { display: grid; place-items: center; width: 16px; height: 16px; margin-top: 1px; border-radius: 50%; background: #f4ede0; color: #725f35; font-size: 10px; font-weight: 800; }
+.governance-finding > div { display: flex; flex-direction: column; gap: 2px; }
+.governance-finding strong { color: #4f4634; font-size: 12px; }
+.governance-finding span:last-child { color: #999; font-size: 10px; line-height: 1.4; }
+.expected-policy { display: flex; align-items: center; flex-wrap: wrap; gap: 5px; margin-top: 10px; padding-top: 9px; border-top: 1px solid #ecece7; }
+.expected-policy > span { margin-right: 2px; color: #999; font-size: 10px; text-transform: uppercase; letter-spacing: .06em; }
+.expected-policy code { padding: 2px 5px; border-radius: 5px; background: #f3f3f0; color: #666; font-size: 10px; }
 .governance-warning, .governance-unavailable { display: inline-block; margin-top: 4px; font-size: 12px; line-height: 1.45; }
 .governance-warning { color: #6b5d3e; }
 .governance-unavailable { color: #888; }
