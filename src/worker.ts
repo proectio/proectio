@@ -1,7 +1,7 @@
 import secretPlacementPolicy from "../config/secret-placement-policy.json";
 import { cookie, createSession, readCookie, verifySession } from "./auth";
 import { loadInventory, loadRepositoryDetails, loadRepositoryGovernance } from "./github";
-import { listWorkerSecretNames } from "./cloudflare";
+import { listWorkerBindings, listWorkerDeployments, listWorkerSecretNames } from "./cloudflare";
 import { compareSecretNames } from "./secret-inventory";
 import type { SecretPlacementPolicy } from "./secret-inventory";
 
@@ -229,6 +229,53 @@ export default {
       }
     }
 
+
+    if (url.pathname === "/api/cloudflare-runtime") {
+      if (!(await isAuthenticated(request, env))) return json({ error: "Unauthorized" }, 401);
+
+      const fullName = url.searchParams.get("repo") ?? "";
+      if (!/^[^/]+\/[^/]+$/.test(fullName)) {
+        return json({ error: "Invalid Cloudflare runtime request" }, 400);
+      }
+
+      const configured = Boolean(
+        env.CLOUDFLARE_ACCOUNT_ID &&
+        env.CLOUDFLARE_API_TOKEN &&
+        env.CLOUDFLARE_WORKER_NAME &&
+        env.CLOUDFLARE_REPOSITORY === fullName,
+      );
+
+      if (!configured) {
+        return json({ runtime: { configured: false } });
+      }
+
+      try {
+        const [deployments, bindings] = await Promise.all([
+          listWorkerDeployments(
+            env.CLOUDFLARE_ACCOUNT_ID!,
+            env.CLOUDFLARE_API_TOKEN!,
+            env.CLOUDFLARE_WORKER_NAME!,
+          ),
+          listWorkerBindings(
+            env.CLOUDFLARE_ACCOUNT_ID!,
+            env.CLOUDFLARE_API_TOKEN!,
+            env.CLOUDFLARE_WORKER_NAME!,
+          ),
+        ]);
+
+        return json({
+          runtime: {
+            configured: true,
+            worker: env.CLOUDFLARE_WORKER_NAME,
+            deployments,
+            bindings,
+          },
+        });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Unknown Cloudflare runtime error";
+        return json({ error: message }, 502);
+      }
+    }
 
     if (url.pathname === "/api/repository-governance") {
       if (!(await isAuthenticated(request, env))) return json({ error: "Unauthorized" }, 401);
