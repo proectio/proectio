@@ -51,6 +51,7 @@ type CloudflareRuntime = {
 };
 type CloudflareRuntimeResponse = { runtime: CloudflareRuntime } | { error: string };
 type Filter = "all" | "public" | "private" | "archived";
+type ChatGptReferenceMode = "url" | "name";
 
 
 type UiIconName =
@@ -64,7 +65,8 @@ type UiIconName =
   | "refresh"
   | "text"
   | "lock"
-  | "package";
+  | "package"
+  | "settings";
 
 function UiIcon({ name, size = 14 }: { name: UiIconName; size?: number }) {
   const common = {
@@ -109,6 +111,9 @@ function UiIcon({ name, size = 14 }: { name: UiIconName; size?: number }) {
   if (name === "package") {
     return <svg {...common}><path d="M12 3 4.5 7 12 11l7.5-4L12 3Z" /><path d="M4.5 7v10L12 21l7.5-4V7" /><path d="M12 11v10" /></svg>;
   }
+  if (name === "settings") {
+    return <svg {...common}><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6V21h-4v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1L4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.6-1H3v-4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L4.3 7 7 4.2l.1.1a1.7 1.7 0 0 0 1.9.3 1.7 1.7 0 0 0 1-1.6V3h4v.1a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1L19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.1v4H21a1.7 1.7 0 0 0-1.6 1Z" /></svg>;
+  }
   return <svg {...common}><path d="M20 6v5h-5" /><path d="M19 11a7 7 0 1 0 1 5" /></svg>;
 }
 
@@ -138,20 +143,8 @@ function bindingTypeIcon(type: string): UiIconName {
   }
 }
 
-function chatGptRepositoryUrl(
-  fullName: string,
-  governanceIssues: number,
-  placementIssues: number,
-  githubSecretCount: number,
-  cloudflareSecretCount: number,
-): string {
-  const prompt = [
-    `Review the GitHub repository ${fullName}.`,
-    `Repository: https://github.com/${fullName}`,
-    `Current Proectio snapshot: governance issues ${governanceIssues}; secret placement issues ${placementIssues}; GitHub secrets ${githubSecretCount}; Cloudflare secrets ${cloudflareSecretCount}.`,
-    "If GitHub access is connected, inspect the repository directly. Help me understand and improve repository health, CI, branch protection, secret placement, and Cloudflare deployment. Start with the current state and concrete next steps.",
-  ].join("\n");
-
+function chatGptRepositoryUrl(fullName: string, mode: ChatGptReferenceMode): string {
+  const prompt = mode === "url" ? `https://github.com/${fullName}` : fullName;
   const url = new URL("https://chatgpt.com/");
   url.searchParams.set("prompt", prompt);
   return url.toString();
@@ -231,6 +224,10 @@ export default function App() {
   const detectedTimeZone = useMemo(() => getDetectedTimeZone(), []);
   const timeZones = useMemo(() => listTimeZones(), []);
   const [timeZonePreference, setTimeZonePreference] = useState(() => localStorage.getItem("proectio-time-zone") || "auto");
+  const [chatGptReferenceMode, setChatGptReferenceMode] = useState<ChatGptReferenceMode>(() =>
+    localStorage.getItem("proectio-chatgpt-reference") === "name" ? "name" : "url"
+  );
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const selectedTimeZone = timeZonePreference === "auto" ? detectedTimeZone : timeZonePreference;
 
   useEffect(() => {
@@ -241,6 +238,10 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem("proectio-time-zone", timeZonePreference);
   }, [timeZonePreference]);
+
+  useEffect(() => {
+    localStorage.setItem("proectio-chatgpt-reference", chatGptReferenceMode);
+  }, [chatGptReferenceMode]);
 
   useEffect(() => {
     fetch("/api/session")
@@ -393,6 +394,60 @@ export default function App() {
               ))}
             </select>
           </label>
+          <div className="settings-control">
+            <button
+              className="secondary settings-trigger"
+              type="button"
+              aria-expanded={settingsOpen}
+              aria-controls="proectio-settings"
+              onClick={() => setSettingsOpen((open) => !open)}
+            >
+              <UiIcon name="settings" size={14} />
+              Settings
+            </button>
+            {settingsOpen && (
+              <section className="settings-popover" id="proectio-settings" aria-label="Settings">
+                <div className="settings-popover-header">
+                  <strong>Settings</strong>
+                  <button
+                    className="settings-close"
+                    type="button"
+                    aria-label="Close settings"
+                    onClick={() => setSettingsOpen(false)}
+                  >
+                    ×
+                  </button>
+                </div>
+                <div className="settings-group">
+                  <div>
+                    <strong>ChatGPT repository reference</strong>
+                    <span>Choose the only value passed to a new ChatGPT conversation.</span>
+                  </div>
+                  <div className="settings-toggle" role="group" aria-label="ChatGPT repository reference">
+                    <button
+                      type="button"
+                      className={chatGptReferenceMode === "name" ? "active" : ""}
+                      aria-pressed={chatGptReferenceMode === "name"}
+                      onClick={() => setChatGptReferenceMode("name")}
+                    >
+                      Name
+                    </button>
+                    <button
+                      type="button"
+                      className={chatGptReferenceMode === "url" ? "active" : ""}
+                      aria-pressed={chatGptReferenceMode === "url"}
+                      onClick={() => setChatGptReferenceMode("url")}
+                    >
+                      URL
+                    </button>
+                  </div>
+                  <code className="settings-preview">
+                    {chatGptReferenceMode === "url" ? "https://github.com/owner/repository" : "owner/repository"}
+                  </code>
+                </div>
+              </section>
+            )}
+          </div>
           <button className="secondary" onClick={() => fetch("/auth/logout", { method: "POST" }).then(() => location.reload())}>
             Sign out
           </button>
@@ -514,13 +569,7 @@ export default function App() {
                                 )}
                                 <a
                                   className="repository-link"
-                                  href={chatGptRepositoryUrl(
-                                    fullName,
-                                    governanceIssues,
-                                    placementIssues,
-                                    inventory.githubNames.length,
-                                    inventory.cloudflareNames.length,
-                                  )}
+                                  href={chatGptRepositoryUrl(fullName, chatGptReferenceMode)}
                                   target="_blank"
                                   rel="noreferrer"
                                   title="Start a new ChatGPT conversation about this repository"
