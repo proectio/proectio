@@ -506,7 +506,17 @@ export default function App() {
                                   <span className="branch-name">{repository.default_branch}</span>
                                 </div>
                                 {!repositoryGovernance.branchProtection.available ? (
-                                  <span className="governance-unavailable">Permission unavailable. Grant Administration: read to the Proectio GitHub App.</span>
+                                  <div className="permission-unavailable">
+                                    <span className="governance-unavailable">Permission unavailable. Grant Administration: read to the Proectio GitHub App.</span>
+                                    <a
+                                      className="permission-review-link"
+                                      href={installation.installationUrl}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                    >
+                                      Review permissions
+                                    </a>
+                                  </div>
                                 ) : repositoryGovernance.branchProtection.summary?.protected ? (
                                   <div className="protection-list">
                                     <span>✓ Protected</span>
