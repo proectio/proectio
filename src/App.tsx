@@ -328,13 +328,13 @@ export default function App() {
                                 {inventory.cloudflare.appUrl && (
                                   <a className="repository-link" href={inventory.cloudflare.appUrl} target="_blank" rel="noreferrer" title="Open Cloudflare app">
                                     <img src="https://www.cloudflare.com/favicon.ico" alt="" aria-hidden="true" />
-                                    App
+                                    CF App
                                   </a>
                                 )}
                                 {installation.githubAppUrl && (
                                   <a className="repository-link" href={installation.githubAppUrl} target="_blank" rel="noreferrer" title="Open GitHub App">
                                     <img src="https://github.githubassets.com/favicons/favicon.svg" alt="" aria-hidden="true" />
-                                    App
+                                    GH App
                                   </a>
                                 )}
                               </div>
