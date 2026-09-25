@@ -52,17 +52,20 @@ Settings form except one confirmation click during a fresh registration.
 
 ## Committed non-secret configuration
 
-The committed identifiers are legacy bootstrap state from the Repory era. They
-are NOT the production GitHub App and do not prove one exists:
+Current GitHub App:
 
-- Legacy GitHub App (verified by API): **ReporyHQ**, user-owned by `sergii`
-- Legacy GitHub App ID: `5035680`
-- Legacy GitHub Client ID: `Iv23liRYQ460OIMG6JO8`
-- Legacy app page: <https://github.com/apps/reporyhq>
-- Allowed owner login (`OWNER_LOGIN`, an application allowlist — **not** app ownership): `sergii`
-- Desired app to register: **Proectio Repo Observer**, owned by the `proectio` organization
-- Declared permissions for the desired app: metadata (read), secrets (read), environments (read)
-- Declared events: none
+- **Proectio Repo Observer**
+- owner: `proectio` organization
+- App ID: `5062093`
+- Client ID: `Iv23lignlZc2qFlBadPp`
+- slug: `proectio-repo-observer`
+- allowed dashboard login (`OWNER_LOGIN`): `sergii`
+- installability source of truth: `public: true` in `config/github-app-manifest.json`
+- declared permissions: metadata, secrets, environments, actions, and administration - all read-only
+- declared events: none
+
+The older ReporyHQ identifiers are preserved only in `config/github-app-state.json`
+as migration history. They are not active Proectio credentials.
 
 ## 1. Prerequisites
 
@@ -94,9 +97,8 @@ The Worker must exist before the bootstrap transfers secrets to it.
 ## 3. Bootstrap the GitHub App
 
 The desired app is the organization-owned `Proectio Repo Observer` registered from
-`config/github-app-manifest.json`. It does not exist yet — the committed
-identifiers are stale legacy ReporyHQ state. The default command therefore
-reports that verification result and never creates anything:
+`config/github-app-manifest.json`. It already exists. The default command verifies
+that exact app and never creates a duplicate:
 
 ```bash
 npm run bootstrap:github-app
@@ -107,17 +109,40 @@ The script:
 - verifies `gh` authentication
 - resolves the repository owner (the `proectio` organization)
 - checks GitHub for the desired org-owned app by its slug
-- reports the committed App ID / Client ID as stale legacy ReporyHQ identifiers
-- refuses to treat committed IDs as proof that the desired app exists
+- verifies the committed App ID / Client ID match Proectio Repo Observer
+- verifies the manifest declares `public: true`, so newly registered state is installable on any account
 
-### Registering Proectio Repo Observer
+### Existing app: enable installation on other accounts
+
+The manifest now declares:
+
+```json
+"public": true
+```
+
+For an app that already exists, changing the committed manifest does **not**
+retroactively change GitHub's live app setting. Perform this one-time update in GitHub:
+
+1. Open **Organization settings > Developer settings > GitHub Apps > Proectio Repo Observer > General**
+2. Find **Where can this GitHub App be installed?**
+3. Select **Any account**
+4. Save changes
+
+This makes the app installable on `sergii` and other accounts where you are allowed to install apps.
+It does not publish the app to GitHub Marketplace.
+
+After that, use Proectio's **Add account / repositories** button and choose either
+**All repositories** or **Only select repositories** for the target account.
+
+### Recreating the app from the manifest
+
+Only if the app ever needs to be recreated:
 
 ```bash
 npm run bootstrap:github-app -- --create --org proectio --sync-cloudflare
 ```
 
-The `url` field in the manifest must point at a sensible project URL; it
-already does.
+The `url` field in the manifest must point at a sensible project URL; it already does.
 
 Flow:
 
@@ -222,15 +247,17 @@ Webhook can remain disabled for VS1; Proectio receives no webhook events.
 
 ## 6. Install the app
 
-Install Proectio Repo Observer on the account whose repositories should be inventoried:
+Once **Where can this GitHub App be installed?** is set to **Any account**, install
+Proectio Repo Observer on every account whose repositories should be inventoried:
 
-1. Open the Proectio Repo Observer GitHub App installation page
-2. Select the account
-3. Install the app
-4. Prefer **All repositories** for a complete inventory
-5. Keep the app permissions read-only
+1. In Proectio, select **Add account / repositories**
+2. Choose the account, for example `sergii`
+3. Choose **All repositories** for complete inventory, or **Only select repositories**
+4. If selecting repositories, choose the desired repositories such as `openings`
+5. Confirm installation
 
-Proectio discovers installations automatically.
+Proectio discovers installations automatically. The dashboard shows the actual GitHub
+installation mode as **All repositories** or **Selected repositories**, plus the number visible.
 
 ## 7. Verify
 
