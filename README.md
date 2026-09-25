@@ -119,12 +119,14 @@ Desired app: **Proectio Repo Observer**, owned by the `proectio` organization.
 Source of truth: the committed GitHub App manifest
 [`config/github-app-manifest.json`](config/github-app-manifest.json).
 
-Public configuration committed in `wrangler.jsonc` (currently stale legacy
-state — App ID `5035680` / Client ID `Iv23liRYQ460OIMG6JO8` belong to
-**ReporyHQ**, a user-owned app under `sergii`; they are replaced when
-Proectio Repo Observer is registered):
+Current public configuration committed in `wrangler.jsonc`:
 
-- Allowed owner login (`OWNER_LOGIN`, an application allowlist — **not** app ownership): `sergii`
+- GitHub App ID: `5062093`
+- GitHub Client ID: `Iv23lignlZc2qFlBadPp`
+- Allowed dashboard login (`OWNER_LOGIN`, an application allowlist - **not** app ownership): `sergii`
+
+`config/github-app-state.json` records that these identifiers belong to
+**Proectio Repo Observer**, owned by the `proectio` organization.
 
 Declared permissions (all read-only, each tied to an endpoint Proectio actually calls):
 
@@ -138,7 +140,12 @@ Declared permissions (all read-only, each tied to an endpoint Proectio actually 
 
 No organization permission is requested. Proectio never calls an organization
 API endpoint, so none is granted. No webhook events are requested because the
-implementation does not receive webhooks. `public` is `false`.
+implementation does not receive webhooks.
+
+The manifest declares `public: true`. In GitHub App terminology this means the app
+can be installed on accounts other than its owner; it does **not** mean Marketplace
+publication. For the already-created app, the equivalent **Any account** setting must
+be enabled once in GitHub's App settings.
 
 `script/bootstrap_github_app.mjs` verifies that the desired org-owned Proectio Repo Observer
 app exists and never creates a duplicate; committed identifiers that resolve to
@@ -165,9 +172,9 @@ npm run bootstrap:github-app -- --create     # register Proectio Repo Observer f
 ```
 
 The default command resolves the desired org-owned Proectio Repo Observer app (by slug, on
-GitHub) and verifies it without creating anything. `--create` registers the app
-through the GitHub App manifest flow, replaces the stale legacy ReporyHQ
-identifiers in config, and stores generated secrets without ever printing them.
+GitHub) and verifies it without creating anything. It also requires the committed manifest
+to declare `public: true`. `--create` is reserved for recreating the app from the manifest
+and stores generated secrets without ever printing them.
 See `script/bootstrap_github_app.mjs --help` for options.
 
 The detailed production runbook remains at [docs/bootstrap.md](docs/bootstrap.md).
@@ -267,3 +274,16 @@ The dashboard includes direct actions to manage repository selection for an exis
 to open the GitHub App installation flow for another account or organization. Proectio does not
 pretend that unselected repositories are visible: GitHub does not expose repository data to the
 installation until access is granted.
+
+
+### Install on additional accounts
+
+Because Proectio is intended to inventory repositories across accounts, the GitHub App must use
+**Any account** installation scope. After the one-time GitHub App setting is enabled:
+
+1. use **Add account / repositories** in Proectio
+2. select the target account, such as `sergii`
+3. choose **All repositories** or **Only select repositories**
+4. confirm the installation
+
+The existing app does not need to be recreated merely to change this setting.

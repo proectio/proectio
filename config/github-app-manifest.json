@@ -4,7 +4,7 @@
   "description": "Read-only GitHub repository inventory and configuration dashboard for Proectio.",
   "redirect_url": "http://127.0.0.1:4567/github-app-manifest/callback",
   "callback_urls": [],
-  "public": false,
+  "public": true,
   "request_oauth_on_install": false,
   "setup_on_update": false,
   "default_permissions": {
