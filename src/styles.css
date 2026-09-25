@@ -187,3 +187,24 @@ tbody .repository-details-row:last-child td { border-bottom: 0; }
   .placement-item { grid-template-columns: 1fr 18px; }
   .placement-item > span:last-child { grid-column: 1 / -1; }
 }
+
+
+.section-title, .card-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.section-title svg {
+  color: #777;
+  flex: 0 0 auto;
+}
+.card-title svg {
+  color: #777;
+  flex: 0 0 auto;
+}
+.details-title.section-title {
+  display: inline-flex;
+}
+.icon-button svg {
+  display: block;
+}
