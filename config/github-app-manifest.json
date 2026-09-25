@@ -10,7 +10,9 @@
   "default_permissions": {
     "metadata": "read",
     "secrets": "read",
-    "environments": "read"
+    "environments": "read",
+    "actions": "read",
+    "administration": "read"
   },
   "default_events": []
 }
