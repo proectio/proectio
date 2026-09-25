@@ -290,7 +290,17 @@ export default function App() {
                       <td>
                         <div className="repository-name-line">
                           <div className="repository-primary">
-                            <strong>{repository.name}</strong>
+                            <strong>
+                              <a
+                                className="repository-title-link"
+                                href={`https://github.com/${fullName}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                title="Open GitHub repository"
+                              >
+                                {repository.name}
+                              </a>
+                            </strong>
                             {repository.archived && <span className="tag">Archived</span>}
                           </div>
                           {inventory && (
@@ -321,10 +331,6 @@ export default function App() {
                                     App
                                   </a>
                                 )}
-                                <a className="repository-link" href={`https://github.com/${fullName}`} target="_blank" rel="noreferrer" title="Open GitHub repository">
-                                  <img src="https://github.githubassets.com/favicons/favicon.svg" alt="" aria-hidden="true" />
-                                  Repo
-                                </a>
                                 {installation.githubAppUrl && (
                                   <a className="repository-link" href={installation.githubAppUrl} target="_blank" rel="noreferrer" title="Open GitHub App">
                                     <img src="https://github.githubassets.com/favicons/favicon.svg" alt="" aria-hidden="true" />
