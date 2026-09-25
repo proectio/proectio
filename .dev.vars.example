@@ -4,6 +4,6 @@ GITHUB_PRIVATE_KEY="-----BEGIN RSA PRIVATE KEY-----\n...\n-----END RSA PRIVATE K
 GITHUB_CLIENT_SECRET=
 SESSION_SECRET=
 
-# VS2 cross-provider secret-name inventory
-CLOUDFLARE_ACCOUNT_ID=
+# Cross-provider Cloudflare inventory.
+# Non-secret repository/account/Worker mappings live in config/repository-resources.json.
 CLOUDFLARE_API_TOKEN=

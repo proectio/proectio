@@ -1,0 +1,12 @@
+{
+  "repositories": [
+    {
+      "repository": "proectio/proectio",
+      "cloudflare": {
+        "accountId": "3094c995ea8e0405b8aa7fd1259eaea8",
+        "worker": "proectio",
+        "appUrl": "$request-origin"
+      }
+    }
+  ]
+}

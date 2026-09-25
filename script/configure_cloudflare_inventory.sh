@@ -1,32 +1,39 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+PROECTIO_WORKER="proectio"
 WORKER="proectio"
 REPOSITORY="proectio/proectio"
 ACCOUNT_ID="${CLOUDFLARE_ACCOUNT_ID:-}"
+APP_URL=""
 DEPLOY=false
 
 usage() {
   cat <<'EOF'
-Configure Proectio Cloudflare inventory access.
+Configure a repository -> Cloudflare Worker mapping for Proectio.
 
 Usage:
   script/configure_cloudflare_inventory.sh [options]
 
 Options:
-  --worker NAME         Cloudflare Worker name (default: proectio)
+  --worker NAME          Target Cloudflare Worker name (default: proectio)
   --repository OWNER/REPO
-                        Repository mapped to the Worker (default: proectio/proectio)
-  --account-id ID       Cloudflare account ID (otherwise auto-detect)
-  --deploy              Deploy after npm run check
-  -h, --help            Show this help
+                         Repository mapped to the Worker (default: proectio/proectio)
+  --account-id ID        Cloudflare account ID (otherwise auto-detect)
+  --app-url URL          Optional deployed application URL
+                         Use "$request-origin" for the Proectio app itself
+  --proectio-worker NAME Worker that runs Proectio and stores CLOUDFLARE_API_TOKEN
+                         (default: proectio)
+  --deploy               Deploy Proectio after npm run check
+  -h, --help             Show this help
 
 Token behavior:
-  - If CLOUDFLARE_API_TOKEN already exists as a Worker secret, it is left unchanged.
+  - CLOUDFLARE_API_TOKEN belongs to Proectio, not the target Worker.
+  - If it already exists on the Proectio Worker, it is left unchanged.
   - Otherwise the script uses CLOUDFLARE_API_TOKEN from the environment.
   - If still missing, it prompts securely without echoing the value.
 
-The token should have least-privilege Workers Scripts Read access.
+The token should have least-privilege read access to every mapped Cloudflare resource.
 Secret values are never printed.
 EOF
 }
@@ -45,6 +52,14 @@ while [[ $# -gt 0 ]]; do
       ACCOUNT_ID="$2"
       shift 2
       ;;
+    --app-url)
+      APP_URL="$2"
+      shift 2
+      ;;
+    --proectio-worker)
+      PROECTIO_WORKER="$2"
+      shift 2
+      ;;
     --deploy)
       DEPLOY=true
       shift
@@ -60,6 +75,16 @@ while [[ $# -gt 0 ]]; do
       ;;
   esac
 done
+
+if [[ ! "$REPOSITORY" =~ ^[^/[:space:]]+/[^/[:space:]]+$ ]]; then
+  echo "Invalid repository. Expected OWNER/REPO." >&2
+  exit 1
+fi
+
+if [[ -z "$WORKER" || -z "$PROECTIO_WORKER" ]]; then
+  echo "Worker names must not be empty." >&2
+  exit 1
+fi
 
 echo "==> Verify Wrangler authentication"
 npx wrangler whoami >/dev/null
@@ -91,76 +116,76 @@ if [[ ! "$ACCOUNT_ID" =~ ^[A-Za-z0-9_-]+$ ]]; then
   exit 1
 fi
 
-echo "==> Ensure CLOUDFLARE_API_TOKEN Worker secret exists"
-SECRET_LIST="$(npx wrangler secret list --name "$WORKER" 2>/dev/null || true)"
+echo "==> Ensure CLOUDFLARE_API_TOKEN exists on Proectio Worker"
+SECRET_LIST="$(npx wrangler secret list --name "$PROECTIO_WORKER" 2>/dev/null || true)"
 if printf '%s' "$SECRET_LIST" | grep -q 'CLOUDFLARE_API_TOKEN'; then
-  echo "CLOUDFLARE_API_TOKEN already exists; leaving it unchanged."
+  echo "CLOUDFLARE_API_TOKEN already exists on $PROECTIO_WORKER; leaving it unchanged."
 else
   TOKEN="${CLOUDFLARE_API_TOKEN:-}"
   if [[ -z "$TOKEN" ]]; then
-    read -rsp "Cloudflare API token (Workers Scripts Read): " TOKEN
+    read -rsp "Cloudflare API token for Proectio (read-only): " TOKEN
     echo
   fi
   if [[ -z "$TOKEN" ]]; then
     echo "Cloudflare API token is required." >&2
     exit 1
   fi
-  printf '%s' "$TOKEN" | npx wrangler secret put CLOUDFLARE_API_TOKEN --name "$WORKER"
+  printf '%s' "$TOKEN" | npx wrangler secret put CLOUDFLARE_API_TOKEN --name "$PROECTIO_WORKER"
   unset TOKEN
 fi
 
-echo "==> Persist non-secret inventory mapping in wrangler.jsonc"
-ACCOUNT_ID="$ACCOUNT_ID" WORKER="$WORKER" REPOSITORY="$REPOSITORY" node <<'NODE'
+echo "==> Upsert repository resource mapping"
+ACCOUNT_ID="$ACCOUNT_ID" WORKER="$WORKER" REPOSITORY="$REPOSITORY" APP_URL="$APP_URL" node <<'NODE'
 import fs from "node:fs";
 
-const path = "wrangler.jsonc";
-let source = fs.readFileSync(path, "utf8");
+const path = "config/repository-resources.json";
+const data = JSON.parse(fs.readFileSync(path, "utf8"));
+if (!Array.isArray(data.repositories)) throw new Error('"repositories" must be an array');
 
-function setVar(name, value) {
-  const escaped = value.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
-  const pattern = new RegExp(`("${name}"\\s*:\\s*)\"[^\"]*"`);
-  if (pattern.test(source)) {
-    source = source.replace(pattern, `$1"${escaped}"`);
-    return;
-  }
+const repository = process.env.REPOSITORY;
+const existing = data.repositories.find((entry) => entry.repository === repository);
+const cloudflare = {
+  accountId: process.env.ACCOUNT_ID,
+  worker: process.env.WORKER,
+};
 
-  const varsStart = source.indexOf('"vars"');
-  if (varsStart < 0) throw new Error('wrangler.jsonc has no "vars" object');
-  const open = source.indexOf("{", varsStart);
-  const close = source.indexOf("}", open);
-  if (open < 0 || close < 0) throw new Error('cannot locate "vars" object');
-
-  const body = source.slice(open + 1, close);
-  const trimmed = body.trimEnd();
-  const needsComma = trimmed.trim().length > 0 && !trimmed.trim().endsWith(",");
-  const insertion = `${needsComma ? "," : ""}\n    "${name}": "${escaped}"`;
-  source = source.slice(0, close) + insertion + source.slice(close);
+if (process.env.APP_URL) {
+  cloudflare.appUrl = process.env.APP_URL;
+} else if (existing?.cloudflare?.appUrl) {
+  cloudflare.appUrl = existing.cloudflare.appUrl;
 }
 
-setVar("CLOUDFLARE_ACCOUNT_ID", process.env.ACCOUNT_ID);
-setVar("CLOUDFLARE_WORKER_NAME", process.env.WORKER);
-setVar("CLOUDFLARE_REPOSITORY", process.env.REPOSITORY);
+if (existing) {
+  existing.cloudflare = cloudflare;
+} else {
+  data.repositories.push({ repository, cloudflare });
+}
 
-fs.writeFileSync(path, source);
+data.repositories.sort((a, b) => a.repository.localeCompare(b.repository));
+fs.writeFileSync(path, JSON.stringify(data, null, 2) + "\n");
 NODE
 
-echo "==> Verify configuration"
-grep -q '"CLOUDFLARE_ACCOUNT_ID"' wrangler.jsonc
-grep -q '"CLOUDFLARE_WORKER_NAME"' wrangler.jsonc
-grep -q '"CLOUDFLARE_REPOSITORY"' wrangler.jsonc
-npx wrangler secret list --name "$WORKER" | grep 'CLOUDFLARE_API_TOKEN' >/dev/null
+echo "==> Validate repository resource registry"
+npm run validate:resources
+
+echo "==> Verify Proectio Cloudflare token without printing it"
+npx wrangler secret list --name "$PROECTIO_WORKER" | grep 'CLOUDFLARE_API_TOKEN' >/dev/null
 
 echo "==> Run checks"
 npm run check
 
 if [[ "$DEPLOY" == "true" ]]; then
-  echo "==> Deploy"
+  echo "==> Deploy Proectio"
   npm run deploy
 fi
 
 echo
-echo "Cloudflare inventory configuration is ready."
-echo "Worker: $WORKER"
+echo "Cloudflare repository mapping is ready."
 echo "Repository: $REPOSITORY"
-echo "Account ID persisted in wrangler.jsonc."
-echo "CLOUDFLARE_API_TOKEN verified without printing its value."
+echo "Cloudflare Worker: $WORKER"
+echo "Cloudflare account: $ACCOUNT_ID"
+echo "Proectio Worker: $PROECTIO_WORKER"
+if [[ -n "$APP_URL" ]]; then
+  echo "App URL: $APP_URL"
+fi
+echo "CLOUDFLARE_API_TOKEN verified on Proectio without printing its value."

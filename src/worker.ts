@@ -7,6 +7,11 @@ import { compareSecretNames } from "./secret-inventory";
 import type { SecretPlacementPolicy } from "./secret-inventory";
 import { evaluateBranchProtection } from "./governance-policy";
 import type { GovernancePolicy } from "./governance-policy";
+import {
+  cloudflareDashboardUrl,
+  cloudflareResourceForRepository,
+  resolveCloudflareAppUrl,
+} from "./resource-registry";
 
 interface Env {
   ASSETS: Fetcher;
@@ -16,10 +21,7 @@ interface Env {
   GITHUB_CLIENT_SECRET: string;
   SESSION_SECRET: string;
   OWNER_LOGIN: string;
-  CLOUDFLARE_ACCOUNT_ID?: string;
   CLOUDFLARE_API_TOKEN?: string;
-  CLOUDFLARE_WORKER_NAME?: string;
-  CLOUDFLARE_REPOSITORY?: string;
 }
 
 interface GitHubOAuthTokenResponse {
@@ -184,14 +186,10 @@ export default {
           ...githubDetails.environments.flatMap((environment) => environment.secrets.map((secret) => secret.name)),
         ];
 
-        const cloudflareConfigured = Boolean(
-          env.CLOUDFLARE_ACCOUNT_ID &&
-          env.CLOUDFLARE_API_TOKEN &&
-          env.CLOUDFLARE_WORKER_NAME &&
-          env.CLOUDFLARE_REPOSITORY === fullName,
-        );
+        const cloudflareResource = cloudflareResourceForRepository(fullName);
+        const cloudflareConfigured = Boolean(cloudflareResource && env.CLOUDFLARE_API_TOKEN);
 
-        if (!cloudflareConfigured) {
+        if (!cloudflareConfigured || !cloudflareResource) {
           return json({
             githubNames: [...new Set(githubNames)].sort(),
             cloudflareNames: [],
@@ -205,9 +203,9 @@ export default {
         }
 
         const cloudflareSecrets = await listWorkerSecretNames(
-          env.CLOUDFLARE_ACCOUNT_ID!,
+          cloudflareResource.accountId,
           env.CLOUDFLARE_API_TOKEN!,
-          env.CLOUDFLARE_WORKER_NAME!,
+          cloudflareResource.worker,
         );
         const cloudflareNames = cloudflareSecrets.map((secret) => secret.name);
 
@@ -221,9 +219,9 @@ export default {
           ),
           cloudflare: {
             configured: true,
-            worker: env.CLOUDFLARE_WORKER_NAME,
-            dashboardUrl: `https://dash.cloudflare.com/${env.CLOUDFLARE_ACCOUNT_ID}/workers/services/view/${encodeURIComponent(env.CLOUDFLARE_WORKER_NAME!)}/production`,
-            appUrl: url.origin,
+            worker: cloudflareResource.worker,
+            dashboardUrl: cloudflareDashboardUrl(cloudflareResource),
+            appUrl: resolveCloudflareAppUrl(cloudflareResource, url.origin),
           },
         });
       } catch (error) {
@@ -241,35 +239,31 @@ export default {
         return json({ error: "Invalid Cloudflare runtime request" }, 400);
       }
 
-      const configured = Boolean(
-        env.CLOUDFLARE_ACCOUNT_ID &&
-        env.CLOUDFLARE_API_TOKEN &&
-        env.CLOUDFLARE_WORKER_NAME &&
-        env.CLOUDFLARE_REPOSITORY === fullName,
-      );
+      const cloudflareResource = cloudflareResourceForRepository(fullName);
+      const configured = Boolean(cloudflareResource && env.CLOUDFLARE_API_TOKEN);
 
-      if (!configured) {
+      if (!configured || !cloudflareResource) {
         return json({ runtime: { configured: false } });
       }
 
       try {
         const [deployments, bindings] = await Promise.all([
           listWorkerDeployments(
-            env.CLOUDFLARE_ACCOUNT_ID!,
+            cloudflareResource.accountId,
             env.CLOUDFLARE_API_TOKEN!,
-            env.CLOUDFLARE_WORKER_NAME!,
+            cloudflareResource.worker,
           ),
           listWorkerBindings(
-            env.CLOUDFLARE_ACCOUNT_ID!,
+            cloudflareResource.accountId,
             env.CLOUDFLARE_API_TOKEN!,
-            env.CLOUDFLARE_WORKER_NAME!,
+            cloudflareResource.worker,
           ),
         ]);
 
         return json({
           runtime: {
             configured: true,
-            worker: env.CLOUDFLARE_WORKER_NAME,
+            worker: cloudflareResource.worker,
             deployments,
             bindings,
           },
