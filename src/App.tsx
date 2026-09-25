@@ -19,6 +19,19 @@ type SecretInventory = {
 };
 type SecretInventoryResponse = SecretInventory | { error: string };
 type GovernanceResponse = { governance: RepositoryGovernance } | { error: string };
+type CloudflareRuntime = {
+  configured: boolean;
+  worker?: string;
+  deployments?: Array<{
+    id: string;
+    createdOn: string;
+    source?: string;
+    strategy?: string;
+    versions: Array<{ versionId: string; percentage: number }>;
+  }>;
+  bindings?: Array<{ name: string; type: string }>;
+};
+type CloudflareRuntimeResponse = { runtime: CloudflareRuntime } | { error: string };
 type Filter = "all" | "public" | "private" | "archived";
 
 function secretCount(details: RepositoryDetails | undefined): number | null {
@@ -85,6 +98,8 @@ export default function App() {
   const [inventoryLoading, setInventoryLoading] = useState<Record<string, boolean>>({});
   const [governance, setGovernance] = useState<Record<string, RepositoryGovernance>>({});
   const [governanceLoading, setGovernanceLoading] = useState<Record<string, boolean>>({});
+  const [cloudflareRuntime, setCloudflareRuntime] = useState<Record<string, CloudflareRuntime>>({});
+  const [cloudflareRuntimeLoading, setCloudflareRuntimeLoading] = useState<Record<string, boolean>>({});
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [filter, setFilter] = useState<Filter>("all");
@@ -187,12 +202,29 @@ export default function App() {
     }
   }
 
+  async function loadCloudflareRuntime(fullName: string, force = false) {
+    if (!force && (cloudflareRuntime[fullName] || cloudflareRuntimeLoading[fullName])) return;
+    setCloudflareRuntimeLoading((current) => ({ ...current, [fullName]: true }));
+    try {
+      const params = new URLSearchParams({ repo: fullName });
+      const response = await fetch(`/api/cloudflare-runtime?${params}`);
+      const body = (await response.json()) as CloudflareRuntimeResponse;
+      if (!response.ok || "error" in body) throw new Error("error" in body ? body.error : "Cloudflare runtime request failed");
+      setCloudflareRuntime((current) => ({ ...current, [fullName]: body.runtime }));
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Cloudflare runtime request failed");
+    } finally {
+      setCloudflareRuntimeLoading((current) => ({ ...current, [fullName]: false }));
+    }
+  }
+
   async function refreshRepository(installationId: number, fullName: string, defaultBranch: string) {
     setError(null);
     await Promise.all([
       loadDetails(installationId, fullName, true),
       loadSecretInventory(installationId, fullName, true),
       loadGovernance(installationId, fullName, defaultBranch, true),
+      loadCloudflareRuntime(fullName, true),
     ]);
   }
 
@@ -201,6 +233,7 @@ export default function App() {
       void loadDetails(installation.installationId, repository.full_name);
       void loadSecretInventory(installation.installationId, repository.full_name);
       void loadGovernance(installation.installationId, repository.full_name, repository.default_branch);
+      void loadCloudflareRuntime(repository.full_name);
     }
   }, [repositories]);
 
@@ -280,9 +313,15 @@ export default function App() {
                 const repositoryDetails = details[fullName];
                 const inventory = secretInventory[fullName];
                 const repositoryGovernance = governance[fullName];
+                const runtime = cloudflareRuntime[fullName];
                 const githubSecretCount = secretCount(repositoryDetails);
                 const placementIssues = inventory?.comparison.filter((item) => item.verdict !== "expected").length ?? 0;
-                const refreshing = Boolean(detailLoading[fullName] || inventoryLoading[fullName] || governanceLoading[fullName]);
+                const refreshing = Boolean(
+                  detailLoading[fullName] ||
+                  inventoryLoading[fullName] ||
+                  governanceLoading[fullName] ||
+                  cloudflareRuntimeLoading[fullName]
+                );
 
                 return (
                   <Fragment key={repository.id}>
@@ -479,6 +518,67 @@ export default function App() {
                                   </div>
                                 ) : (
                                   <span className="governance-warning">Default branch is not protected.</span>
+                                )}
+                              </section>
+                            </div>
+                          )}
+                        </section>
+
+                        <section className="runtime-panel">
+                          <div className="runtime-header">
+                            <div>
+                              <strong>Cloudflare runtime</strong>
+                              <span>Deployments and Worker bindings</span>
+                            </div>
+                            {cloudflareRuntimeLoading[fullName] && !runtime && (
+                              <span className="inline-loading"><span className="spinner" aria-hidden="true" />Loading</span>
+                            )}
+                          </div>
+
+                          {runtime && !runtime.configured && (
+                            <span className="governance-unavailable">No Cloudflare Worker mapping for this repository.</span>
+                          )}
+
+                          {runtime?.configured && (
+                            <div className="runtime-grid">
+                              <section className="runtime-card">
+                                <div className="runtime-card-header">
+                                  <strong>Deployments</strong>
+                                  <span className="count-badge">{runtime.deployments?.length ?? 0}</span>
+                                </div>
+                                {(runtime.deployments?.length ?? 0) === 0 ? (
+                                  <span className="empty-state">No deployments.</span>
+                                ) : (
+                                  <div className="deployment-list">
+                                    {(runtime.deployments ?? []).slice(0, 5).map((deployment) => (
+                                      <div className="deployment-item" key={deployment.id}>
+                                        <div>
+                                          <strong>{deployment.source || "deployment"}</strong>
+                                          <span>{deployment.strategy || "percentage"} · {deployment.versions.length} version{deployment.versions.length === 1 ? "" : "s"}</span>
+                                        </div>
+                                        <RelativeTime value={deployment.createdOn} now={now} timeZone={selectedTimeZone} />
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </section>
+
+                              <section className="runtime-card">
+                                <div className="runtime-card-header">
+                                  <strong>Bindings</strong>
+                                  <span className="count-badge">{runtime.bindings?.length ?? 0}</span>
+                                </div>
+                                {(runtime.bindings?.length ?? 0) === 0 ? (
+                                  <span className="empty-state">No bindings.</span>
+                                ) : (
+                                  <div className="binding-list">
+                                    {(runtime.bindings ?? []).map((binding) => (
+                                      <div className="binding-item" key={binding.name}>
+                                        <code>{binding.name}</code>
+                                        <span>{binding.type}</span>
+                                      </div>
+                                    ))}
+                                  </div>
                                 )}
                               </section>
                             </div>
