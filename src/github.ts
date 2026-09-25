@@ -25,6 +25,36 @@ export interface RepositoryDetails {
   environments: GitHubEnvironment[];
 }
 
+export interface GitHubWorkflow {
+  id: number;
+  name: string;
+  path: string;
+  state: string;
+}
+
+export interface BranchProtectionSummary {
+  branch: string;
+  protected: boolean;
+  requiredStatusChecks: string[];
+  enforceAdmins: boolean;
+  requiredPullRequestReviews: boolean;
+  requiredApprovingReviewCount: number;
+  restrictions: boolean;
+}
+
+export interface RepositoryGovernance {
+  actions: {
+    available: boolean;
+    workflows: GitHubWorkflow[];
+    error?: string;
+  };
+  branchProtection: {
+    available: boolean;
+    summary?: BranchProtectionSummary;
+    error?: string;
+  };
+}
+
 export interface InstallationInventory {
   installationId: number;
   account: {
@@ -56,6 +86,22 @@ interface SecretListResponse {
 
 interface EnvironmentListResponse {
   environments: Array<{ name: string }>;
+}
+
+interface WorkflowListResponse {
+  workflows: GitHubWorkflow[];
+}
+
+interface BranchProtectionResponse {
+  required_status_checks?: {
+    contexts?: string[];
+    checks?: Array<{ context: string; app_id: number | null }>;
+  } | null;
+  enforce_admins?: { enabled: boolean } | null;
+  required_pull_request_reviews?: {
+    required_approving_review_count?: number;
+  } | null;
+  restrictions?: unknown;
 }
 
 const apiVersion = "2022-11-28";
@@ -168,6 +214,15 @@ export async function createAppJwt(appId: string, privateKey: string, now = Date
   return `${unsignedToken}.${base64Url(new Uint8Array(signature))}`;
 }
 
+class GitHubApiError extends Error {
+  constructor(
+    readonly status: number,
+    message: string,
+  ) {
+    super(message);
+  }
+}
+
 async function githubJson<T>(url: string, token: string, init: RequestInit = {}): Promise<T> {
   const headers = new Headers(init.headers);
   headers.set("Accept", "application/vnd.github+json");
@@ -178,7 +233,7 @@ async function githubJson<T>(url: string, token: string, init: RequestInit = {})
   const response = await fetch(url, { ...init, headers });
   if (!response.ok) {
     const body = await response.text();
-    throw new Error(`GitHub API ${response.status}: ${body.slice(0, 500)}`);
+    throw new GitHubApiError(response.status, `GitHub API ${response.status}: ${body.slice(0, 500)}`);
   }
 
   return (await response.json()) as T;
@@ -240,6 +295,54 @@ async function listEnvironmentSecrets(token: string, fullName: string): Promise<
   return environments;
 }
 
+
+async function listWorkflows(token: string, fullName: string): Promise<GitHubWorkflow[]> {
+  const result = await githubJson<WorkflowListResponse>(
+    `https://api.github.com/repos/${fullName}/actions/workflows?per_page=100`,
+    token,
+  );
+  return result.workflows;
+}
+
+async function loadBranchProtection(
+  token: string,
+  fullName: string,
+  branch: string,
+): Promise<BranchProtectionSummary> {
+  try {
+    const result = await githubJson<BranchProtectionResponse>(
+      `https://api.github.com/repos/${fullName}/branches/${encodeURIComponent(branch)}/protection`,
+      token,
+    );
+
+    const contexts = new Set<string>(result.required_status_checks?.contexts ?? []);
+    for (const check of result.required_status_checks?.checks ?? []) contexts.add(check.context);
+
+    return {
+      branch,
+      protected: true,
+      requiredStatusChecks: [...contexts].sort(),
+      enforceAdmins: Boolean(result.enforce_admins?.enabled),
+      requiredPullRequestReviews: Boolean(result.required_pull_request_reviews),
+      requiredApprovingReviewCount: result.required_pull_request_reviews?.required_approving_review_count ?? 0,
+      restrictions: Boolean(result.restrictions),
+    };
+  } catch (error) {
+    if (error instanceof GitHubApiError && error.status === 404) {
+      return {
+        branch,
+        protected: false,
+        requiredStatusChecks: [],
+        enforceAdmins: false,
+        requiredPullRequestReviews: false,
+        requiredApprovingReviewCount: 0,
+        restrictions: false,
+      };
+    }
+    throw error;
+  }
+}
+
 export async function loadInventory(appId: string, privateKey: string): Promise<InstallationInventory[]> {
   const appJwt = await createAppJwt(appId, privateKey);
   const installations = await listInstallations(appJwt);
@@ -271,4 +374,39 @@ export async function loadRepositoryDetails(
   ]);
 
   return { secrets, environments };
+}
+
+
+export async function loadRepositoryGovernance(
+  appId: string,
+  privateKey: string,
+  installationId: number,
+  fullName: string,
+  defaultBranch: string,
+): Promise<RepositoryGovernance> {
+  const appJwt = await createAppJwt(appId, privateKey);
+  const token = await createInstallationToken(appJwt, installationId);
+
+  const [actionsResult, protectionResult] = await Promise.allSettled([
+    listWorkflows(token, fullName),
+    loadBranchProtection(token, fullName, defaultBranch),
+  ]);
+
+  return {
+    actions:
+      actionsResult.status === "fulfilled"
+        ? { available: true, workflows: actionsResult.value }
+        : {
+            available: false,
+            workflows: [],
+            error: actionsResult.reason instanceof Error ? actionsResult.reason.message : "Unable to load workflows",
+          },
+    branchProtection:
+      protectionResult.status === "fulfilled"
+        ? { available: true, summary: protectionResult.value }
+        : {
+            available: false,
+            error: protectionResult.reason instanceof Error ? protectionResult.reason.message : "Unable to load branch protection",
+          },
+  };
 }
