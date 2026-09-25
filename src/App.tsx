@@ -18,7 +18,25 @@ type SecretInventory = {
   cloudflare: { configured: boolean; worker?: string; dashboardUrl?: string; appUrl?: string };
 };
 type SecretInventoryResponse = SecretInventory | { error: string };
-type GovernanceResponse = { governance: RepositoryGovernance } | { error: string };
+type GovernanceEvaluation = {
+  configured: boolean;
+  healthy: boolean;
+  findings: Array<{
+    id: string;
+    message: string;
+    expected: string;
+    actual: string;
+  }>;
+  expected?: {
+    protected?: boolean;
+    requiredPullRequestReviews?: boolean;
+    minimumApprovals?: number;
+    requiredStatusChecks?: string[];
+    enforceAdmins?: boolean;
+  };
+};
+type RepositoryGovernanceWithEvaluation = RepositoryGovernance & { evaluation: GovernanceEvaluation };
+type GovernanceResponse = { governance: RepositoryGovernanceWithEvaluation } | { error: string };
 type CloudflareRuntime = {
   configured: boolean;
   worker?: string;
@@ -96,7 +114,7 @@ export default function App() {
   const [detailLoading, setDetailLoading] = useState<Record<string, boolean>>({});
   const [secretInventory, setSecretInventory] = useState<Record<string, SecretInventory>>({});
   const [inventoryLoading, setInventoryLoading] = useState<Record<string, boolean>>({});
-  const [governance, setGovernance] = useState<Record<string, RepositoryGovernance>>({});
+  const [governance, setGovernance] = useState<Record<string, RepositoryGovernanceWithEvaluation>>({});
   const [governanceLoading, setGovernanceLoading] = useState<Record<string, boolean>>({});
   const [cloudflareRuntime, setCloudflareRuntime] = useState<Record<string, CloudflareRuntime>>({});
   const [cloudflareRuntimeLoading, setCloudflareRuntimeLoading] = useState<Record<string, boolean>>({});
@@ -316,6 +334,7 @@ export default function App() {
                 const runtime = cloudflareRuntime[fullName];
                 const githubSecretCount = secretCount(repositoryDetails);
                 const placementIssues = inventory?.comparison.filter((item) => item.verdict !== "expected").length ?? 0;
+                const governanceIssues = repositoryGovernance?.evaluation.findings.length ?? 0;
                 const refreshing = Boolean(
                   detailLoading[fullName] ||
                   inventoryLoading[fullName] ||
@@ -357,6 +376,18 @@ export default function App() {
                               <span className="provider-summary">
                                 GitHub {inventory.githubNames.length} · Cloudflare {inventory.cloudflareNames.length}
                               </span>
+                              {repositoryGovernance?.evaluation.configured && (
+                                <span
+                                  className={governanceIssues === 0 ? "health health-ok" : "health health-warning"}
+                                  title={
+                                    governanceIssues === 0
+                                      ? "Repository governance matches policy"
+                                      : `${governanceIssues} governance issue${governanceIssues === 1 ? "" : "s"}`
+                                  }
+                                >
+                                  {governanceIssues === 0 ? "Governance in sync" : `Governance ${governanceIssues} issue${governanceIssues === 1 ? "" : "s"}`}
+                                </span>
+                              )}
                               <div className="repository-links" aria-label={`${fullName} links`}>
                                 {inventory.cloudflare.dashboardUrl && (
                                   <a className="repository-link" href={inventory.cloudflare.dashboardUrl} target="_blank" rel="noreferrer" title="Open Cloudflare Worker">
@@ -503,7 +534,14 @@ export default function App() {
                               <section className="governance-card">
                                 <div className="governance-card-header">
                                   <strong>Branch protection</strong>
-                                  <span className="branch-name">{repository.default_branch}</span>
+                                  <div className="governance-card-meta">
+                                    {repositoryGovernance.evaluation.configured && (
+                                      <span className={governanceIssues === 0 ? "count-badge policy-ok" : "count-badge policy-issue"}>
+                                        {governanceIssues === 0 ? "✓" : governanceIssues}
+                                      </span>
+                                    )}
+                                    <span className="branch-name">{repository.default_branch}</span>
+                                  </div>
                                 </div>
                                 {!repositoryGovernance.branchProtection.available ? (
                                   <div className="permission-unavailable">
@@ -517,6 +555,18 @@ export default function App() {
                                       Review permissions
                                     </a>
                                   </div>
+                                ) : repositoryGovernance.evaluation.configured && governanceIssues > 0 ? (
+                                  <div className="governance-findings">
+                                    {repositoryGovernance.evaluation.findings.map((finding) => (
+                                      <div className="governance-finding" key={finding.id}>
+                                        <span className="finding-mark">!</span>
+                                        <div>
+                                          <strong>{finding.message}</strong>
+                                          <span>Expected: {finding.expected} · Actual: {finding.actual}</span>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
                                 ) : repositoryGovernance.branchProtection.summary?.protected ? (
                                   <div className="protection-list">
                                     <span>✓ Protected</span>
@@ -528,6 +578,20 @@ export default function App() {
                                   </div>
                                 ) : (
                                   <span className="governance-warning">Default branch is not protected.</span>
+                                )}
+                                {repositoryGovernance.evaluation.configured && repositoryGovernance.evaluation.expected && (
+                                  <div className="expected-policy">
+                                    <span>Expected</span>
+                                    <code>protected</code>
+                                    {repositoryGovernance.evaluation.expected.requiredPullRequestReviews && <code>PR reviews</code>}
+                                    {(repositoryGovernance.evaluation.expected.minimumApprovals ?? 0) > 0 && (
+                                      <code>{repositoryGovernance.evaluation.expected.minimumApprovals} approval</code>
+                                    )}
+                                    {(repositoryGovernance.evaluation.expected.requiredStatusChecks ?? []).map((check) => (
+                                      <code key={check}>check: {check}</code>
+                                    ))}
+                                    {repositoryGovernance.evaluation.expected.enforceAdmins && <code>admins enforced</code>}
+                                  </div>
                                 )}
                               </section>
                             </div>

@@ -1,9 +1,12 @@
 import secretPlacementPolicy from "../config/secret-placement-policy.json";
+import governancePolicy from "../config/governance-policy.json";
 import { cookie, createSession, readCookie, verifySession } from "./auth";
 import { loadInventory, loadRepositoryDetails, loadRepositoryGovernance } from "./github";
 import { listWorkerBindings, listWorkerDeployments, listWorkerSecretNames } from "./cloudflare";
 import { compareSecretNames } from "./secret-inventory";
 import type { SecretPlacementPolicy } from "./secret-inventory";
+import { evaluateBranchProtection } from "./governance-policy";
+import type { GovernancePolicy } from "./governance-policy";
 
 interface Env {
   ASSETS: Fetcher;
@@ -293,14 +296,22 @@ export default {
       }
 
       try {
+        const governance = await loadRepositoryGovernance(
+          env.GITHUB_APP_ID,
+          env.GITHUB_PRIVATE_KEY,
+          installationId,
+          fullName,
+          defaultBranch,
+        );
+        const policy = (
+          governancePolicy.repositories[fullName as keyof typeof governancePolicy.repositories] ?? {}
+        ) as GovernancePolicy;
+
         return json({
-          governance: await loadRepositoryGovernance(
-            env.GITHUB_APP_ID,
-            env.GITHUB_PRIVATE_KEY,
-            installationId,
-            fullName,
-            defaultBranch,
-          ),
+          governance: {
+            ...governance,
+            evaluation: evaluateBranchProtection(governance.branchProtection.summary, policy),
+          },
         });
       } catch (error) {
         const message = error instanceof Error ? error.message : "Unknown repository governance error";

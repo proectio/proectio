@@ -1,0 +1,13 @@
+{
+  "repositories": {
+    "proectio/proectio": {
+      "defaultBranch": {
+        "protected": true,
+        "requiredPullRequestReviews": true,
+        "minimumApprovals": 1,
+        "requiredStatusChecks": ["check"],
+        "enforceAdmins": true
+      }
+    }
+  }
+}
