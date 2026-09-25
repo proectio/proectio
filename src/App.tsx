@@ -138,6 +138,25 @@ function bindingTypeIcon(type: string): UiIconName {
   }
 }
 
+function chatGptRepositoryUrl(
+  fullName: string,
+  governanceIssues: number,
+  placementIssues: number,
+  githubSecretCount: number,
+  cloudflareSecretCount: number,
+): string {
+  const prompt = [
+    `Review the GitHub repository ${fullName}.`,
+    `Repository: https://github.com/${fullName}`,
+    `Current Proectio snapshot: governance issues ${governanceIssues}; secret placement issues ${placementIssues}; GitHub secrets ${githubSecretCount}; Cloudflare secrets ${cloudflareSecretCount}.`,
+    "If GitHub access is connected, inspect the repository directly. Help me understand and improve repository health, CI, branch protection, secret placement, and Cloudflare deployment. Start with the current state and concrete next steps.",
+  ].join("\n");
+
+  const url = new URL("https://chatgpt.com/");
+  url.searchParams.set("prompt", prompt);
+  return url.toString();
+}
+
 function secretCount(details: RepositoryDetails | undefined): number | null {
   if (!details) return null;
   return details.secrets.length + details.environments.reduce((sum, environment) => sum + environment.secrets.length, 0);
@@ -493,6 +512,22 @@ export default function App() {
                                     GH App
                                   </a>
                                 )}
+                                <a
+                                  className="repository-link"
+                                  href={chatGptRepositoryUrl(
+                                    fullName,
+                                    governanceIssues,
+                                    placementIssues,
+                                    inventory.githubNames.length,
+                                    inventory.cloudflareNames.length,
+                                  )}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  title="Start a new ChatGPT conversation about this repository"
+                                >
+                                  <img src="https://chatgpt.com/favicon.ico" alt="" aria-hidden="true" />
+                                  ChatGPT
+                                </a>
                               </div>
                             </div>
                           )}
