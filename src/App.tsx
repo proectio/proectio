@@ -15,7 +15,7 @@ type SecretInventory = {
     actual: Array<"github" | "cloudflare">;
     verdict: "expected" | "missing" | "unexpected" | "misplaced" | "unmanaged";
   }>;
-  cloudflare: { configured: boolean; worker?: string };
+  cloudflare: { configured: boolean; worker?: string; dashboardUrl?: string };
 };
 type SecretInventoryResponse = SecretInventory | { error: string };
 type GovernanceResponse = { governance: RepositoryGovernance } | { error: string };
@@ -226,7 +226,27 @@ export default function App() {
           <p className="eyebrow">GitHub control panel</p>
           <h1>Proectio</h1>
         </div>
-        <div className="header-actions">
+        <div className="header-actions-wrap">
+          <div className="quick-links" aria-label="Project links">
+            <a className="quick-link" href={location.origin} target="_blank" rel="noreferrer">
+              <img src="https://www.cloudflare.com/favicon.ico" alt="" aria-hidden="true" />
+              Live app
+            </a>
+            <a
+              className="quick-link"
+              href={Object.values(secretInventory).find((item) => item.cloudflare.dashboardUrl)?.cloudflare.dashboardUrl ?? "https://dash.cloudflare.com/"}
+              target="_blank"
+              rel="noreferrer"
+            >
+              <img src="https://www.cloudflare.com/favicon.ico" alt="" aria-hidden="true" />
+              Worker
+            </a>
+            <a className="quick-link" href="https://github.com/proectio/proectio" target="_blank" rel="noreferrer">
+              <img src="https://github.githubassets.com/favicons/favicon.svg" alt="" aria-hidden="true" />
+              GitHub
+            </a>
+          </div>
+          <div className="header-actions">
           <label className="timezone-control">
             <span>Time zone</span>
             <select value={timeZonePreference} onChange={(event) => setTimeZonePreference(event.target.value)}>
@@ -240,6 +260,7 @@ export default function App() {
           <button className="secondary" onClick={() => fetch("/auth/logout", { method: "POST" }).then(() => location.reload())}>
             Sign out
           </button>
+          </div>
         </div>
       </header>
 
