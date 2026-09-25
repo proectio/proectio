@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
-import type { InstallationInventory, RepositoryDetails } from "./github";
+import type { InstallationInventory, RepositoryDetails, RepositoryGovernance } from "./github";
 import { formatExactTime, formatRelativeTime, getDetectedTimeZone, listTimeZones } from "./time";
 
 type SessionResponse = { authenticated: boolean };
@@ -18,6 +18,7 @@ type SecretInventory = {
   cloudflare: { configured: boolean; worker?: string };
 };
 type SecretInventoryResponse = SecretInventory | { error: string };
+type GovernanceResponse = { governance: RepositoryGovernance } | { error: string };
 type Filter = "all" | "public" | "private" | "archived";
 
 function secretCount(details: RepositoryDetails | undefined): number | null {
@@ -82,6 +83,8 @@ export default function App() {
   const [detailLoading, setDetailLoading] = useState<Record<string, boolean>>({});
   const [secretInventory, setSecretInventory] = useState<Record<string, SecretInventory>>({});
   const [inventoryLoading, setInventoryLoading] = useState<Record<string, boolean>>({});
+  const [governance, setGovernance] = useState<Record<string, RepositoryGovernance>>({});
+  const [governanceLoading, setGovernanceLoading] = useState<Record<string, boolean>>({});
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [filter, setFilter] = useState<Filter>("all");
@@ -164,11 +167,32 @@ export default function App() {
     }
   }
 
-  async function refreshRepository(installationId: number, fullName: string) {
+  async function loadGovernance(installationId: number, fullName: string, defaultBranch: string, force = false) {
+    if (!force && (governance[fullName] || governanceLoading[fullName])) return;
+    setGovernanceLoading((current) => ({ ...current, [fullName]: true }));
+    try {
+      const params = new URLSearchParams({
+        installationId: String(installationId),
+        repo: fullName,
+        defaultBranch,
+      });
+      const response = await fetch(`/api/repository-governance?${params}`);
+      const body = (await response.json()) as GovernanceResponse;
+      if (!response.ok || "error" in body) throw new Error("error" in body ? body.error : "Governance request failed");
+      setGovernance((current) => ({ ...current, [fullName]: body.governance }));
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Governance request failed");
+    } finally {
+      setGovernanceLoading((current) => ({ ...current, [fullName]: false }));
+    }
+  }
+
+  async function refreshRepository(installationId: number, fullName: string, defaultBranch: string) {
     setError(null);
     await Promise.all([
       loadDetails(installationId, fullName, true),
       loadSecretInventory(installationId, fullName, true),
+      loadGovernance(installationId, fullName, defaultBranch, true),
     ]);
   }
 
@@ -176,6 +200,7 @@ export default function App() {
     for (const { installation, repository } of repositories) {
       void loadDetails(installation.installationId, repository.full_name);
       void loadSecretInventory(installation.installationId, repository.full_name);
+      void loadGovernance(installation.installationId, repository.full_name, repository.default_branch);
     }
   }, [repositories]);
 
@@ -254,9 +279,10 @@ export default function App() {
                 const fullName = repository.full_name;
                 const repositoryDetails = details[fullName];
                 const inventory = secretInventory[fullName];
+                const repositoryGovernance = governance[fullName];
                 const githubSecretCount = secretCount(repositoryDetails);
                 const placementIssues = inventory?.comparison.filter((item) => item.verdict !== "expected").length ?? 0;
-                const refreshing = Boolean(detailLoading[fullName] || inventoryLoading[fullName]);
+                const refreshing = Boolean(detailLoading[fullName] || inventoryLoading[fullName] || governanceLoading[fullName]);
 
                 return (
                   <Fragment key={repository.id}>
@@ -308,7 +334,7 @@ export default function App() {
                           </div>
                           <button
                             className="icon-button"
-                            onClick={() => void refreshRepository(installation.installationId, fullName)}
+                            onClick={() => void refreshRepository(installation.installationId, fullName, repository.default_branch)}
                             disabled={refreshing}
                             aria-label={`Refresh ${fullName}`}
                             title="Refresh secrets inventory"
@@ -367,6 +393,67 @@ export default function App() {
                             )}
                           </section>
                         </div>
+
+                        <section className="governance-panel">
+                          <div className="governance-header">
+                            <div>
+                              <strong>Repository governance</strong>
+                              <span>GitHub Actions and default-branch protection</span>
+                            </div>
+                            {governanceLoading[fullName] && !repositoryGovernance && (
+                              <span className="inline-loading"><span className="spinner" aria-hidden="true" />Loading</span>
+                            )}
+                          </div>
+
+                          {repositoryGovernance && (
+                            <div className="governance-grid">
+                              <section className="governance-card">
+                                <div className="governance-card-header">
+                                  <strong>GitHub Actions</strong>
+                                  {repositoryGovernance.actions.available && (
+                                    <span className="count-badge">{repositoryGovernance.actions.workflows.length}</span>
+                                  )}
+                                </div>
+                                {!repositoryGovernance.actions.available ? (
+                                  <span className="governance-unavailable">Permission unavailable. Grant Actions: read to the Proectio GitHub App.</span>
+                                ) : repositoryGovernance.actions.workflows.length === 0 ? (
+                                  <span className="empty-state">No workflows.</span>
+                                ) : (
+                                  <div className="workflow-list">
+                                    {repositoryGovernance.actions.workflows.map((workflow) => (
+                                      <div className="workflow-item" key={workflow.id}>
+                                        <strong>{workflow.name}</strong>
+                                        <span>{workflow.path}</span>
+                                        <span className="workflow-state">{workflow.state}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </section>
+
+                              <section className="governance-card">
+                                <div className="governance-card-header">
+                                  <strong>Branch protection</strong>
+                                  <span className="branch-name">{repository.default_branch}</span>
+                                </div>
+                                {!repositoryGovernance.branchProtection.available ? (
+                                  <span className="governance-unavailable">Permission unavailable. Grant Administration: read to the Proectio GitHub App.</span>
+                                ) : repositoryGovernance.branchProtection.summary?.protected ? (
+                                  <div className="protection-list">
+                                    <span>✓ Protected</span>
+                                    <span>{repositoryGovernance.branchProtection.summary.requiredPullRequestReviews ? "✓ Pull request reviews required" : "No required pull request reviews"}</span>
+                                    <span>{repositoryGovernance.branchProtection.summary.requiredStatusChecks.length > 0
+                                      ? `✓ ${repositoryGovernance.branchProtection.summary.requiredStatusChecks.length} required status check${repositoryGovernance.branchProtection.summary.requiredStatusChecks.length === 1 ? "" : "s"}`
+                                      : "No required status checks"}</span>
+                                    <span>{repositoryGovernance.branchProtection.summary.enforceAdmins ? "✓ Applies to admins" : "Does not enforce admins"}</span>
+                                  </div>
+                                ) : (
+                                  <span className="governance-warning">Default branch is not protected.</span>
+                                )}
+                              </section>
+                            </div>
+                          )}
+                        </section>
 
                         {inventory && (
                           <section className="placement-panel">
