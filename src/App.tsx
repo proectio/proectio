@@ -15,7 +15,7 @@ type SecretInventory = {
     actual: Array<"github" | "cloudflare">;
     verdict: "expected" | "missing" | "unexpected" | "misplaced" | "unmanaged";
   }>;
-  cloudflare: { configured: boolean; worker?: string; dashboardUrl?: string };
+  cloudflare: { configured: boolean; worker?: string; dashboardUrl?: string; appUrl?: string };
 };
 type SecretInventoryResponse = SecretInventory | { error: string };
 type GovernanceResponse = { governance: RepositoryGovernance } | { error: string };
@@ -226,27 +226,7 @@ export default function App() {
           <p className="eyebrow">GitHub control panel</p>
           <h1>Proectio</h1>
         </div>
-        <div className="header-actions-wrap">
-          <div className="quick-links" aria-label="Project links">
-            <a className="quick-link" href={location.origin} target="_blank" rel="noreferrer">
-              <img src="https://www.cloudflare.com/favicon.ico" alt="" aria-hidden="true" />
-              Live app
-            </a>
-            <a
-              className="quick-link"
-              href={Object.values(secretInventory).find((item) => item.cloudflare.dashboardUrl)?.cloudflare.dashboardUrl ?? "https://dash.cloudflare.com/"}
-              target="_blank"
-              rel="noreferrer"
-            >
-              <img src="https://www.cloudflare.com/favicon.ico" alt="" aria-hidden="true" />
-              Worker
-            </a>
-            <a className="quick-link" href="https://github.com/proectio/proectio" target="_blank" rel="noreferrer">
-              <img src="https://github.githubassets.com/favicons/favicon.svg" alt="" aria-hidden="true" />
-              GitHub
-            </a>
-          </div>
-          <div className="header-actions">
+        <div className="header-actions">
           <label className="timezone-control">
             <span>Time zone</span>
             <select value={timeZonePreference} onChange={(event) => setTimeZonePreference(event.target.value)}>
@@ -260,7 +240,6 @@ export default function App() {
           <button className="secondary" onClick={() => fetch("/auth/logout", { method: "POST" }).then(() => location.reload())}>
             Sign out
           </button>
-          </div>
         </div>
       </header>
 
@@ -329,6 +308,30 @@ export default function App() {
                               <span className="provider-summary">
                                 GitHub {inventory.githubNames.length} · Cloudflare {inventory.cloudflareNames.length}
                               </span>
+                              <div className="repository-links" aria-label={`${fullName} links`}>
+                                {inventory.cloudflare.dashboardUrl && (
+                                  <a className="repository-link" href={inventory.cloudflare.dashboardUrl} target="_blank" rel="noreferrer" title="Open Cloudflare Worker">
+                                    <img src="https://www.cloudflare.com/favicon.ico" alt="" aria-hidden="true" />
+                                    Worker
+                                  </a>
+                                )}
+                                {inventory.cloudflare.appUrl && (
+                                  <a className="repository-link" href={inventory.cloudflare.appUrl} target="_blank" rel="noreferrer" title="Open Cloudflare app">
+                                    <img src="https://www.cloudflare.com/favicon.ico" alt="" aria-hidden="true" />
+                                    App
+                                  </a>
+                                )}
+                                <a className="repository-link" href={`https://github.com/${fullName}`} target="_blank" rel="noreferrer" title="Open GitHub repository">
+                                  <img src="https://github.githubassets.com/favicons/favicon.svg" alt="" aria-hidden="true" />
+                                  Repo
+                                </a>
+                                {installation.githubAppUrl && (
+                                  <a className="repository-link" href={installation.githubAppUrl} target="_blank" rel="noreferrer" title="Open GitHub App">
+                                    <img src="https://github.githubassets.com/favicons/favicon.svg" alt="" aria-hidden="true" />
+                                    App
+                                  </a>
+                                )}
+                              </div>
                             </div>
                           )}
                         </div>
