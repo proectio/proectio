@@ -62,7 +62,9 @@ export interface InstallationInventory {
     type: string;
   };
   githubAppUrl?: string;
+  githubAppInstallUrl?: string;
   installationUrl: string;
+  repositorySelection: "all" | "selected";
   repositories: GitHubRepository[];
 }
 
@@ -72,6 +74,7 @@ interface GitHubInstallation {
     login: string;
     type: string;
   };
+  repository_selection: "all" | "selected";
 }
 
 interface GitHubAppMetadata {
@@ -358,6 +361,7 @@ export async function loadInventory(appId: string, privateKey: string): Promise<
   ]);
   const inventory: InstallationInventory[] = [];
   const githubAppUrl = appMetadata.html_url || (appMetadata.slug ? `https://github.com/apps/${appMetadata.slug}` : undefined);
+  const githubAppInstallUrl = appMetadata.slug ? `https://github.com/apps/${appMetadata.slug}/installations/new` : undefined;
 
   for (const installation of installations) {
     const token = await createInstallationToken(appJwt, installation.id);
@@ -370,7 +374,9 @@ export async function loadInventory(appId: string, privateKey: string): Promise<
       installationId: installation.id,
       account: installation.account,
       githubAppUrl,
+      githubAppInstallUrl,
       installationUrl,
+      repositorySelection: installation.repository_selection,
       repositories: await listRepositories(token),
     });
   }
