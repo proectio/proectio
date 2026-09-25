@@ -126,7 +126,7 @@ button, .button { cursor: pointer; }
 .installation-access-list { display: flex; flex-direction: column; gap: 6px; }
 .installation-access-row {
   display: grid;
-  grid-template-columns: 18px minmax(120px, 1fr) auto auto auto;
+  grid-template-columns: 18px minmax(120px, 1fr) auto auto auto auto;
   align-items: center;
   gap: 9px;
   min-height: 34px;
@@ -149,6 +149,18 @@ button, .button { cursor: pointer; }
   white-space: nowrap;
 }
 .access-mode-all { border-color: #cfd9cf; background: #f3f7f3; color: #566356; }
+.permission-mode {
+  padding: 3px 7px;
+  border: 1px solid #deded8;
+  border-radius: 999px;
+  background: #fff;
+  color: #666;
+  font-size: 10px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+.permission-mode-ok { border-color: #cfd9cf; background: #f3f7f3; color: #566356; }
+.permission-mode-warning { border-color: #e4d5b9; background: #fff8ea; color: #80663c; }
 .installation-repository-count { color: #888; font-size: 10px; white-space: nowrap; }
 .installation-action {
   display: inline-flex;
@@ -228,6 +240,35 @@ tbody .repository-details-row:last-child td { border-bottom: 0; }
 .secret-list { display: flex; flex-direction: column; align-items: flex-start; gap: 5px; margin-top: 8px; }
 .secret-list code { background: #f3f3f0; color: #333; padding: 3px 6px; border-radius: 5px; max-width: 100%; overflow-wrap: anywhere; }
 .empty-state { display: inline-block; margin-top: 8px; color: #888; font-size: 12px; }
+.permission-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: #fff3dc;
+  color: #8a6631;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: help;
+}
+.permission-notice {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  margin-top: 8px;
+  padding: 8px 9px;
+  border: 1px solid #ead9bb;
+  border-radius: 8px;
+  background: #fffaf0;
+  color: #6f5b3d;
+  font-size: 11px;
+  line-height: 1.35;
+}
+.permission-notice strong { color: #5e4b31; font-size: 11px; }
+.permission-notice a { color: #604d32; font-weight: 650; text-underline-offset: 2px; }
 
 .governance-panel { margin-top: 12px; border-top: 1px solid #e6e6e1; padding-top: 12px; }
 .governance-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 9px; }
@@ -356,8 +397,8 @@ tbody .repository-details-row:last-child td { border-bottom: 0; }
   .repository-meta { flex-wrap: wrap; }
   .installation-access-header { align-items: flex-start; flex-direction: column; }
   .installation-access-row { grid-template-columns: 18px minmax(0, 1fr) auto; }
-  .installation-repository-count { grid-column: 2; }
-  .installation-action { grid-column: 3; grid-row: 1 / span 2; }
+  .permission-mode, .installation-repository-count { grid-column: 2; }
+  .installation-action { grid-column: 3; grid-row: 1 / span 3; }
   .repository-links { flex-wrap: wrap; white-space: normal; }
   .timezone-control select { width: 190px; }
   .secret-panels { grid-template-columns: 1fr; }
@@ -371,7 +412,7 @@ tbody .repository-details-row:last-child td { border-bottom: 0; }
   .stats div { justify-content: space-between; }
   .toolbar { align-items: stretch; flex-direction: column; }
   .installation-access-row { grid-template-columns: 18px 1fr; }
-  .access-mode, .installation-repository-count, .installation-action {
+  .access-mode, .permission-mode, .installation-repository-count, .installation-action {
     grid-column: 2;
     grid-row: auto;
     justify-self: start;
