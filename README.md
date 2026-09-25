@@ -123,9 +123,11 @@ Declared permissions (all read-only, each tied to an endpoint Proectio actually 
 
 | Permission   | Level | Required by                                                        |
 | ------------ | ----- | ------------------------------------------------------------------ |
-| metadata     | read  | installation inventory (`/installation/repositories`)               |
-| secrets      | read  | repository and environment secret-name listing (`/actions/secrets`) |
-| environments | read  | environment list for environment secret names (`/environments`)     |
+| metadata       | read  | installation inventory (`/installation/repositories`)                    |
+| secrets        | read  | repository and environment secret-name listing (`/actions/secrets`)      |
+| environments   | read  | environment list for environment secret names (`/environments`)          |
+| actions        | read  | workflow inventory (`/actions/workflows`)                                |
+| administration | read  | default-branch protection (`/branches/{branch}/protection`)               |
 
 No organization permission is requested. Proectio never calls an organization
 API endpoint, so none is granted. No webhook events are requested because the
@@ -185,3 +187,14 @@ Production deployment should normally happen through Cloudflare Workers Builds r
 - Keep GitHub Actions verification-only.
 - Keep production credential values in Cloudflare.
 - No repository contents permission is requested by Proectio Repo Observer.
+
+
+## Repository governance
+
+Proectio also inspects two read-only GitHub governance surfaces:
+
+- GitHub Actions workflows configured for the repository
+- protection settings for the repository's default branch
+
+These checks require the GitHub App permissions `actions: read` and `administration: read`.
+If an existing Proectio installation has not yet accepted the new permissions, the dashboard keeps the rest of the repository inventory available and shows the governance card as permission unavailable instead of failing the whole repository inspection.

@@ -1,6 +1,6 @@
 import secretPlacementPolicy from "../config/secret-placement-policy.json";
 import { cookie, createSession, readCookie, verifySession } from "./auth";
-import { loadInventory, loadRepositoryDetails } from "./github";
+import { loadInventory, loadRepositoryDetails, loadRepositoryGovernance } from "./github";
 import { listWorkerSecretNames } from "./cloudflare";
 import { compareSecretNames } from "./secret-inventory";
 import type { SecretPlacementPolicy } from "./secret-inventory";
@@ -223,6 +223,38 @@ export default {
         });
       } catch (error) {
         const message = error instanceof Error ? error.message : "Unknown secret inventory error";
+        return json({ error: message }, 502);
+      }
+    }
+
+
+    if (url.pathname === "/api/repository-governance") {
+      if (!(await isAuthenticated(request, env))) return json({ error: "Unauthorized" }, 401);
+
+      const installationId = Number(url.searchParams.get("installationId"));
+      const fullName = url.searchParams.get("repo") ?? "";
+      const defaultBranch = url.searchParams.get("defaultBranch") ?? "";
+      if (
+        !Number.isInteger(installationId) ||
+        installationId <= 0 ||
+        !/^[^/]+\/[^/]+$/.test(fullName) ||
+        !defaultBranch
+      ) {
+        return json({ error: "Invalid repository governance request" }, 400);
+      }
+
+      try {
+        return json({
+          governance: await loadRepositoryGovernance(
+            env.GITHUB_APP_ID,
+            env.GITHUB_PRIVATE_KEY,
+            installationId,
+            fullName,
+            defaultBranch,
+          ),
+        });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Unknown repository governance error";
         return json({ error: message }, 502);
       }
     }

@@ -84,6 +84,26 @@ tbody .repository-details-row:last-child td { border-bottom: 0; }
 .secret-list code { background: #f3f3f0; color: #333; padding: 3px 6px; border-radius: 5px; max-width: 100%; overflow-wrap: anywhere; }
 .empty-state { display: inline-block; margin-top: 8px; color: #888; font-size: 12px; }
 
+.governance-panel { margin-top: 12px; border-top: 1px solid #e6e6e1; padding-top: 12px; }
+.governance-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 9px; }
+.governance-header > div { display: flex; flex-direction: column; gap: 2px; }
+.governance-header strong { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: #777; }
+.governance-header span { color: #999; font-size: 11px; }
+.governance-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.governance-card { min-height: 110px; border: 1px solid #e4e4df; border-radius: 10px; background: #fff; padding: 12px; }
+.governance-card-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+.governance-card-header strong { font-size: 13px; color: #333; }
+.branch-name { padding: 2px 7px; border-radius: 999px; background: #f1f1ed; color: #666; font: 11px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+.workflow-list, .protection-list { display: flex; flex-direction: column; gap: 6px; }
+.workflow-item { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 10px; align-items: baseline; font-size: 12px; }
+.workflow-item > strong { min-width: 0; overflow-wrap: anywhere; }
+.workflow-item > span:nth-child(2) { grid-column: 1; color: #999; font: 11px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; overflow-wrap: anywhere; }
+.workflow-state { grid-column: 2; grid-row: 1 / span 2; color: #777; font-size: 11px; }
+.protection-list { color: #666; font-size: 12px; }
+.governance-warning, .governance-unavailable { display: inline-block; margin-top: 4px; font-size: 12px; line-height: 1.45; }
+.governance-warning { color: #6b5d3e; }
+.governance-unavailable { color: #888; }
+
 .placement-panel { margin-top: 10px; border-top: 1px solid #e6e6e1; padding-top: 10px; }
 .placement-header { display: flex; align-items: baseline; gap: 9px; margin-bottom: 7px; }
 .placement-header strong { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: #777; }
@@ -109,6 +129,7 @@ tbody .repository-details-row:last-child td { border-bottom: 0; }
   .header-actions { align-items: stretch; flex-direction: column; }
   .timezone-control select { width: 190px; }
   .secret-panels { grid-template-columns: 1fr; }
+  .governance-grid { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 760px) {
