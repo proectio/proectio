@@ -460,6 +460,59 @@ export default function App() {
         <div><strong>{Object.keys(details).length}</strong><span>Repositories inspected</span></div>
       </section>
 
+      <section className="installation-access">
+        <div className="installation-access-header">
+          <div>
+            <strong>GitHub App access</strong>
+            <span>Proectio shows exactly the repositories currently available to the GitHub App.</span>
+          </div>
+          {installations.find((installation) => installation.githubAppInstallUrl)?.githubAppInstallUrl && (
+            <a
+              className="installation-action installation-action-primary"
+              href={installations.find((installation) => installation.githubAppInstallUrl)!.githubAppInstallUrl}
+              target="_blank"
+              rel="noreferrer"
+            >
+              <img src="https://github.githubassets.com/favicons/favicon.svg" alt="" aria-hidden="true" />
+              Add account / repositories
+            </a>
+          )}
+        </div>
+
+        <div className="installation-access-list">
+          {installations.map((installation) => (
+            <div className="installation-access-row" key={installation.installationId}>
+              <img className="installation-provider-icon" src="https://github.githubassets.com/favicons/favicon.svg" alt="" aria-hidden="true" />
+              <div className="installation-account">
+                <strong>{installation.account.login}</strong>
+                <span>{installation.account.type}</span>
+              </div>
+              <span
+                className={installation.repositorySelection === "all" ? "access-mode access-mode-all" : "access-mode"}
+                title={
+                  installation.repositorySelection === "all"
+                    ? "The GitHub App can access all repositories in this account."
+                    : "The GitHub App can access only repositories selected in its installation settings."
+                }
+              >
+                {installation.repositorySelection === "all" ? "All repositories" : "Selected repositories"}
+              </span>
+              <span className="installation-repository-count">
+                {installation.repositories.length} visible
+              </span>
+              <a
+                className="installation-action"
+                href={installation.installationUrl}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Manage repositories
+              </a>
+            </div>
+          ))}
+        </div>
+      </section>
+
       <section className="toolbar">
         <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search repositories…" />
         <div className="filters">
