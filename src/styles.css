@@ -101,6 +101,74 @@ button, .button { cursor: pointer; }
 .stats strong { font-size: 22px; }
 .stats span { color: #777; font-size: 13px; }
 
+
+.installation-access {
+  margin-bottom: 14px;
+  padding: 12px 14px;
+  border: 1px solid #e4e4df;
+  border-radius: 12px;
+  background: #fff;
+}
+.installation-access-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 10px;
+}
+.installation-access-header > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.installation-access-header strong { font-size: 13px; color: #333; }
+.installation-access-header span { font-size: 11px; color: #888; line-height: 1.4; }
+.installation-access-list { display: flex; flex-direction: column; gap: 6px; }
+.installation-access-row {
+  display: grid;
+  grid-template-columns: 18px minmax(120px, 1fr) auto auto auto;
+  align-items: center;
+  gap: 9px;
+  min-height: 34px;
+  padding: 7px 8px;
+  border-radius: 8px;
+  background: #f8f8f5;
+}
+.installation-provider-icon { width: 15px; height: 15px; }
+.installation-account { display: flex; align-items: baseline; gap: 6px; min-width: 0; }
+.installation-account strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
+.installation-account span { color: #999; font-size: 10px; }
+.access-mode {
+  padding: 3px 7px;
+  border: 1px solid #deded8;
+  border-radius: 999px;
+  background: #fff;
+  color: #666;
+  font-size: 10px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+.access-mode-all { border-color: #cfd9cf; background: #f3f7f3; color: #566356; }
+.installation-repository-count { color: #888; font-size: 10px; white-space: nowrap; }
+.installation-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 28px;
+  padding: 5px 9px;
+  border: 1px solid #d7d7d2;
+  border-radius: 8px;
+  background: #fff;
+  color: #333;
+  text-decoration: none;
+  font-size: 10px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+.installation-action:hover { border-color: #bdbdb7; color: #171717; }
+.installation-action img { width: 12px; height: 12px; }
+.installation-action-primary { min-height: 30px; }
+
 .toolbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 20px 0 14px; }
 .toolbar input { width: min(420px, 100%); border: 1px solid #d7d7d2; background: #fff; border-radius: 10px; padding: 11px 13px; }
 .filters { display: flex; flex-wrap: wrap; gap: 7px; }
@@ -286,6 +354,10 @@ tbody .repository-details-row:last-child td { border-bottom: 0; }
   .settings-trigger { width: 100%; justify-content: center; }
   .settings-popover { right: auto; left: 0; width: min(320px, calc(100vw - 32px)); }
   .repository-meta { flex-wrap: wrap; }
+  .installation-access-header { align-items: flex-start; flex-direction: column; }
+  .installation-access-row { grid-template-columns: 18px minmax(0, 1fr) auto; }
+  .installation-repository-count { grid-column: 2; }
+  .installation-action { grid-column: 3; grid-row: 1 / span 2; }
   .repository-links { flex-wrap: wrap; white-space: normal; }
   .timezone-control select { width: 190px; }
   .secret-panels { grid-template-columns: 1fr; }
@@ -298,6 +370,12 @@ tbody .repository-details-row:last-child td { border-bottom: 0; }
   .stats { grid-template-columns: 1fr; }
   .stats div { justify-content: space-between; }
   .toolbar { align-items: stretch; flex-direction: column; }
+  .installation-access-row { grid-template-columns: 18px 1fr; }
+  .access-mode, .installation-repository-count, .installation-action {
+    grid-column: 2;
+    grid-row: auto;
+    justify-self: start;
+  }
   .header { flex-direction: column; }
   .header-actions { width: 100%; }
   .timezone-control select { width: 100%; max-width: none; }
