@@ -61,6 +61,7 @@ export interface InstallationInventory {
     login: string;
     type: string;
   };
+  githubAppUrl?: string;
   repositories: GitHubRepository[];
 }
 
@@ -70,6 +71,11 @@ interface GitHubInstallation {
     login: string;
     type: string;
   };
+}
+
+interface GitHubAppMetadata {
+  html_url?: string;
+  slug?: string;
 }
 
 interface InstallationTokenResponse {
@@ -345,14 +351,19 @@ async function loadBranchProtection(
 
 export async function loadInventory(appId: string, privateKey: string): Promise<InstallationInventory[]> {
   const appJwt = await createAppJwt(appId, privateKey);
-  const installations = await listInstallations(appJwt);
+  const [installations, appMetadata] = await Promise.all([
+    listInstallations(appJwt),
+    githubJson<GitHubAppMetadata>("https://api.github.com/app", appJwt),
+  ]);
   const inventory: InstallationInventory[] = [];
+  const githubAppUrl = appMetadata.html_url || (appMetadata.slug ? `https://github.com/apps/${appMetadata.slug}` : undefined);
 
   for (const installation of installations) {
     const token = await createInstallationToken(appJwt, installation.id);
     inventory.push({
       installationId: installation.id,
       account: installation.account,
+      githubAppUrl,
       repositories: await listRepositories(token),
     });
   }
