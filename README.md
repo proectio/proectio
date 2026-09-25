@@ -252,3 +252,18 @@ npm run configure:cloudflare-inventory -- \
   --account-id account-id \
   --app-url https://example.com
 ```
+
+
+## GitHub App repository access
+
+The dashboard shows exactly the repositories visible to each Proectio Repo Observer installation.
+
+For each installation Proectio surfaces GitHub's repository selection mode:
+
+- `all` - the App can access all repositories in that account
+- `selected` - the App can access only repositories selected in GitHub installation settings
+
+The dashboard includes direct actions to manage repository selection for an existing installation and
+to open the GitHub App installation flow for another account or organization. Proectio does not
+pretend that unselected repositories are visible: GitHub does not expose repository data to the
+installation until access is granted.
