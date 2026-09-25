@@ -8,6 +8,7 @@ type DetailsResponse = { details: RepositoryDetails } | { error: string };
 type SecretInventory = {
   githubNames: string[];
   cloudflareNames: string[];
+  githubAccess: RepositoryDetails["access"];
   comparison: Array<{
     name: string;
     presence: "github-only" | "cloudflare-only" | "both" | "missing";
@@ -151,8 +152,25 @@ function chatGptRepositoryUrl(fullName: string, mode: ChatGptReferenceMode): str
 }
 
 function secretCount(details: RepositoryDetails | undefined): number | null {
-  if (!details) return null;
+  if (!details || !details.access.repositorySecrets.available || !details.access.environments.available) return null;
   return details.secrets.length + details.environments.reduce((sum, environment) => sum + environment.secrets.length, 0);
+}
+
+const requiredInstallationPermissions = [
+  ["actions", "Actions"],
+  ["administration", "Administration"],
+  ["environments", "Environments"],
+  ["secrets", "Secrets"],
+] as const;
+
+function permissionAllowsRead(value: string | undefined): boolean {
+  return value === "read" || value === "write";
+}
+
+function missingInstallationPermissions(installation: InstallationInventory): string[] {
+  return requiredInstallationPermissions
+    .filter(([key]) => !permissionAllowsRead(installation.permissions[key]))
+    .map(([, label]) => label);
 }
 
 function providerLabel(provider: "github" | "cloudflare"): string {
@@ -480,36 +498,49 @@ export default function App() {
         </div>
 
         <div className="installation-access-list">
-          {installations.map((installation) => (
-            <div className="installation-access-row" key={installation.installationId}>
-              <img className="installation-provider-icon" src="https://github.githubassets.com/favicons/favicon.svg" alt="" aria-hidden="true" />
-              <div className="installation-account">
-                <strong>{installation.account.login}</strong>
-                <span>{installation.account.type}</span>
+          {installations.map((installation) => {
+            const missingPermissions = missingInstallationPermissions(installation);
+            return (
+              <div className="installation-access-row" key={installation.installationId}>
+                <img className="installation-provider-icon" src="https://github.githubassets.com/favicons/favicon.svg" alt="" aria-hidden="true" />
+                <div className="installation-account">
+                  <strong>{installation.account.login}</strong>
+                  <span>{installation.account.type}</span>
+                </div>
+                <span
+                  className={installation.repositorySelection === "all" ? "access-mode access-mode-all" : "access-mode"}
+                  title={
+                    installation.repositorySelection === "all"
+                      ? "The GitHub App can access all repositories in this account."
+                      : "The GitHub App can access only repositories selected in its installation settings."
+                  }
+                >
+                  {installation.repositorySelection === "all" ? "All repositories" : "Selected repositories"}
+                </span>
+                <span
+                  className={missingPermissions.length === 0 ? "permission-mode permission-mode-ok" : "permission-mode permission-mode-warning"}
+                  title={
+                    missingPermissions.length === 0
+                      ? "All Proectio read permissions are granted to this installation."
+                      : `Missing required read permissions: ${missingPermissions.join(", ")}`
+                  }
+                >
+                  {missingPermissions.length === 0 ? "Permissions OK" : `${missingPermissions.length} permission${missingPermissions.length === 1 ? "" : "s"} missing`}
+                </span>
+                <span className="installation-repository-count">
+                  {installation.repositories.length} visible
+                </span>
+                <a
+                  className="installation-action"
+                  href={installation.installationUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  {missingPermissions.length === 0 ? "Manage repositories" : "Review permissions"}
+                </a>
               </div>
-              <span
-                className={installation.repositorySelection === "all" ? "access-mode access-mode-all" : "access-mode"}
-                title={
-                  installation.repositorySelection === "all"
-                    ? "The GitHub App can access all repositories in this account."
-                    : "The GitHub App can access only repositories selected in its installation settings."
-                }
-              >
-                {installation.repositorySelection === "all" ? "All repositories" : "Selected repositories"}
-              </span>
-              <span className="installation-repository-count">
-                {installation.repositories.length} visible
-              </span>
-              <a
-                className="installation-action"
-                href={installation.installationUrl}
-                target="_blank"
-                rel="noreferrer"
-              >
-                Manage repositories
-              </a>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </section>
 
@@ -577,14 +608,26 @@ export default function App() {
                           {inventory && (
                             <div className="repository-meta">
                               <span
-                                className={placementIssues === 0 ? "health health-ok" : "health health-warning"}
+                                className={
+                                  !inventory.githubAccess.repositorySecrets.available || !inventory.githubAccess.environments.available
+                                    ? "health health-warning"
+                                    : placementIssues === 0
+                                      ? "health health-ok"
+                                      : "health health-warning"
+                                }
                                 title={
-                                  placementIssues === 0
-                                    ? "All observed secret placements match policy"
-                                    : `${placementIssues} secret placement issue${placementIssues === 1 ? "" : "s"}`
+                                  !inventory.githubAccess.repositorySecrets.available || !inventory.githubAccess.environments.available
+                                    ? "GitHub secret inventory is partial because this installation is missing required permissions"
+                                    : placementIssues === 0
+                                      ? "All observed secret placements match policy"
+                                      : `${placementIssues} secret placement issue${placementIssues === 1 ? "" : "s"}`
                                 }
                               >
-                                {placementIssues === 0 ? "Secrets in sync" : `${placementIssues} secret issue${placementIssues === 1 ? "" : "s"}`}
+                                {!inventory.githubAccess.repositorySecrets.available || !inventory.githubAccess.environments.available
+                                  ? "Secrets partial"
+                                  : placementIssues === 0
+                                    ? "Secrets in sync"
+                                    : `${placementIssues} secret issue${placementIssues === 1 ? "" : "s"}`}
                               </span>
                               <span className="provider-summary">
                                 GitHub {inventory.githubNames.length} · Cloudflare {inventory.cloudflareNames.length}
@@ -644,8 +687,13 @@ export default function App() {
                         {githubSecretCount ?? (detailLoading[fullName] ? <span className="spinner" aria-label="Loading GitHub secret count" /> : "—")}
                       </td>
                       <td>
-                        {repositoryDetails?.environments.length ??
-                          (detailLoading[fullName] ? <span className="spinner" aria-label="Loading environment count" /> : "—")}
+                        {repositoryDetails
+                          ? repositoryDetails.access.environments.available
+                            ? repositoryDetails.environments.length
+                            : <span className="permission-count" title={repositoryDetails.access.environments.error}>!</span>
+                          : detailLoading[fullName]
+                            ? <span className="spinner" aria-label="Loading environment count" />
+                            : "—"}
                       </td>
                     </tr>
                     <tr className="repository-details-row">
@@ -683,10 +731,28 @@ export default function App() {
                               <div className="secret-skeleton" aria-hidden="true"><span /><span /><span /></div>
                             )}
                             {inventory && (
-                              <div className="secret-list">
-                                {inventory.githubNames.map((name) => <code key={name}>{name}</code>)}
-                                {inventory.githubNames.length === 0 && <span className="empty-state">No secrets.</span>}
-                              </div>
+                              <>
+                                {(!inventory.githubAccess.repositorySecrets.available || !inventory.githubAccess.environments.available) && (
+                                  <div className="permission-notice">
+                                    <strong>Partial GitHub access</strong>
+                                    {!inventory.githubAccess.repositorySecrets.available && (
+                                      <span>Repository secrets: permission unavailable.</span>
+                                    )}
+                                    {!inventory.githubAccess.environments.available && (
+                                      <span>Environments: Actions read permission is unavailable or not approved for this installation.</span>
+                                    )}
+                                    <a href={installation.installationUrl} target="_blank" rel="noreferrer">
+                                      Review permissions
+                                    </a>
+                                  </div>
+                                )}
+                                <div className="secret-list">
+                                  {inventory.githubNames.map((name) => <code key={name}>{name}</code>)}
+                                  {inventory.githubNames.length === 0 && inventory.githubAccess.repositorySecrets.available && inventory.githubAccess.environments.available && (
+                                    <span className="empty-state">No secrets.</span>
+                                  )}
+                                </div>
+                              </>
                             )}
                           </section>
 
@@ -895,9 +961,17 @@ export default function App() {
                           <section className="placement-panel">
                             <div className="placement-header">
                               <strong className="section-title"><UiIcon name="placement" />Placement</strong>
-                              <span>{placementIssues === 0 ? "All observed secrets match policy." : `${placementIssues} placement issue${placementIssues === 1 ? "" : "s"}.`}</span>
+                              <span>
+                                {!inventory.githubAccess.repositorySecrets.available || !inventory.githubAccess.environments.available
+                                  ? "Validation paused because GitHub inventory is partial."
+                                  : placementIssues === 0
+                                    ? "All observed secrets match policy."
+                                    : `${placementIssues} placement issue${placementIssues === 1 ? "" : "s"}.`}
+                              </span>
                             </div>
-                            {inventory.comparison.length === 0 ? (
+                            {!inventory.githubAccess.repositorySecrets.available || !inventory.githubAccess.environments.available ? (
+                              <span className="governance-unavailable">Grant and approve the missing GitHub App read permissions before evaluating secret placement.</span>
+                            ) : inventory.comparison.length === 0 ? (
                               <span className="empty-state">No secrets to evaluate.</span>
                             ) : (
                               <div className={placementIssues === 0 ? "placement-list placement-list-healthy" : "placement-list"}>

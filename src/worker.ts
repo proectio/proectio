@@ -185,6 +185,9 @@ export default {
           ...githubDetails.secrets.map((secret) => secret.name),
           ...githubDetails.environments.flatMap((environment) => environment.secrets.map((secret) => secret.name)),
         ];
+        const githubComplete =
+          githubDetails.access.repositorySecrets.available &&
+          githubDetails.access.environments.available;
 
         const cloudflareResource = cloudflareResourceForRepository(fullName);
         const cloudflareConfigured = Boolean(cloudflareResource && env.CLOUDFLARE_API_TOKEN);
@@ -193,11 +196,14 @@ export default {
           return json({
             githubNames: [...new Set(githubNames)].sort(),
             cloudflareNames: [],
-            comparison: compareSecretNames(
-              githubNames,
-              [],
-              (secretPlacementPolicy.repositories[fullName as keyof typeof secretPlacementPolicy.repositories] ?? {}) as SecretPlacementPolicy,
-            ),
+            comparison: githubComplete
+              ? compareSecretNames(
+                  githubNames,
+                  [],
+                  (secretPlacementPolicy.repositories[fullName as keyof typeof secretPlacementPolicy.repositories] ?? {}) as SecretPlacementPolicy,
+                )
+              : [],
+            githubAccess: githubDetails.access,
             cloudflare: { configured: false },
           });
         }
@@ -212,11 +218,14 @@ export default {
         return json({
           githubNames: [...new Set(githubNames)].sort(),
           cloudflareNames: [...new Set(cloudflareNames)].sort(),
-          comparison: compareSecretNames(
-            githubNames,
-            cloudflareNames,
-            (secretPlacementPolicy.repositories[fullName as keyof typeof secretPlacementPolicy.repositories] ?? {}) as SecretPlacementPolicy,
-          ),
+          comparison: githubComplete
+            ? compareSecretNames(
+                githubNames,
+                cloudflareNames,
+                (secretPlacementPolicy.repositories[fullName as keyof typeof secretPlacementPolicy.repositories] ?? {}) as SecretPlacementPolicy,
+              )
+            : [],
+          githubAccess: githubDetails.access,
           cloudflare: {
             configured: true,
             worker: cloudflareResource.worker,
